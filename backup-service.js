@@ -2,7 +2,7 @@ const { dialog } = require('electron');
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { hubPaths, ensureHubStructure, requiredText } = require('./hub-config');
-const { readValidatedHubData, safeTimestamp, fileExists, listValidBackups, persistHubData, loadHubData } = require('./hub-persistence');
+const { readValidatedHubData, safeTimestamp, listValidBackups, persistHubData, loadHubData } = require('./hub-persistence');
 
 async function restoreBackup(_event, fileName) {
   const paths = await ensureHubStructure();
@@ -13,11 +13,7 @@ async function restoreBackup(_event, fileName) {
   const source = path.join(paths.backupDir, safeName);
   const restoredData = await readValidatedHubData(source);
 
-  if (await fileExists(paths.dataFile)) {
-    const preservedName = `preserved-before-restore-${safeTimestamp()}.json`;
-    await fs.copyFile(paths.dataFile, path.join(paths.backupDir, preservedName));
-  }
-  const saved = await persistHubData(restoredData, { createBackup: false });
+  const saved = await persistHubData(restoredData);
   return { ok: true, data: saved, path: paths.dataFile, backups: await listValidBackups() };
 }
 
