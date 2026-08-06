@@ -146,3 +146,18 @@ $('#appName').textContent = window.layerWorks?.appName || "Love's LayerWorks Hub
 $('#milestone').textContent = window.layerWorks?.milestone || 'M1B';
 activateTab('inventory');
 load();
+
+function loadM2TDLab() {
+  const logicScript = document.createElement('script');
+  logicScript.src = 'td-logic.js';
+  logicScript.addEventListener('load', () => {
+    const tdScript = document.createElement('script');
+    tdScript.src = 'renderer-td.js';
+    tdScript.addEventListener('error', () => setStatus('TD Lab failed to load', 'error'));
+    document.body.append(tdScript);
+  });
+  logicScript.addEventListener('error', () => setStatus('TD Lab logic failed to load', 'error'));
+  document.body.append(logicScript);
+}
+
+loadM2TDLab();
