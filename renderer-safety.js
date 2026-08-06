@@ -91,7 +91,7 @@ async function load() {
     renderAll();
     setInventoryDisabled(false);
     if (result.migrated) setStatus('Local data migrated to the locked M3A pricing schema', 'success');
-    else setStatus(result.created ? 'Local inventory file created' : 'Local inventory, projects, and backups loaded', 'success');
+    else setStatus(result.created ? 'Local inventory file created' : 'Local inventory, projects, gallery, and backups loaded', 'success');
   } catch (error) {
     console.error(error);
     state.loadFailed = true;
@@ -144,7 +144,7 @@ $('#restoreBackup').addEventListener('click', restoreBackup);
 $('#exportFullBackup').addEventListener('click', exportFullBackup);
 
 $('#appName').textContent = window.layerWorks?.appName || "Love's LayerWorks Hub";
-$('#milestone').textContent = window.layerWorks?.milestone || 'M3A';
+$('#milestone').textContent = window.layerWorks?.milestone || 'M4A';
 activateTab('inventory');
 load();
 
@@ -162,6 +162,8 @@ loadFeatureScript('td-logic.js')
   .then(() => loadFeatureScript('renderer-td.js'))
   .then(() => loadFeatureScript('quote-logic.js'))
   .then(() => loadFeatureScript('renderer-projects.js'))
+  .then(() => loadFeatureScript('gallery-logic.js'))
+  .then(() => loadFeatureScript('renderer-gallery.js'))
   .catch((error) => {
     console.error(error);
     setStatus(`Feature load failed: ${error.message}`, 'error');

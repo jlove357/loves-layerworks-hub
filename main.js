@@ -5,8 +5,10 @@ const { listValidBackups, persistHubData, loadHubData } = require('./hub-persist
 const {
   selectSwatchImage,
   selectProjectImage,
+  selectFinishedImage,
   copySwatchImage,
   copyProjectImage,
+  copyFinishedImage,
   readManagedImage,
   deleteManagedImage
 } = require('./image-service');
@@ -45,8 +47,10 @@ app.whenReady().then(async () => {
   ipcMain.handle('hub:data-status', dataStatus);
   ipcMain.handle('hub:select-swatch-image', selectSwatchImage);
   ipcMain.handle('hub:select-project-image', selectProjectImage);
+  ipcMain.handle('hub:select-finished-image', selectFinishedImage);
   ipcMain.handle('hub:copy-swatch-image', copySwatchImage);
   ipcMain.handle('hub:copy-project-image', copyProjectImage);
+  ipcMain.handle('hub:copy-finished-image', copyFinishedImage);
   ipcMain.handle('hub:read-managed-image', readManagedImage);
   ipcMain.handle('hub:delete-managed-image', deleteManagedImage);
   ipcMain.handle('hub:export-inventory', exportInventory);
