@@ -2,47 +2,51 @@
 
 A private, local Windows desktop workspace for Love's LayerWorks.
 
-## Active milestone: M1B — Backups, Managed Images, Import, and Export
+## Active milestone: M2 — TD Lab
 
 The current runnable version provides:
 
 - The dark purple four-tab Electron shell
 - Roll Brain inventory for individual physical filament rolls
-- Add, edit, archive, restore, delete, search, filtering, manual weight subtraction, and inventory-value calculations
-- One schema-versioned `hub-data.json` file stored outside the repository
-- Same-folder temporary-file saves with verification before activation
-- Timestamped rolling backups of the previous working data file
-- Automatic retention of the 10 newest valid rolling backups
-- Clear malformed-data handling that leaves the damaged file available
-- Restoration from a validated rolling backup
-- Managed swatch-photo copying into the Hub image folder
-- Swatch previews that continue working after the original source image is moved or deleted
-- Validated inventory JSON export
-- Validated inventory replacement import that preserves settings and projects
-- Rejection of imports that would break existing project-to-roll references
-- Manual full external backup export containing data, managed-image folders, exports, and a manifest
+- Verified local JSON persistence, 10 rolling backups, restore, inventory import/export, and full external backup export
+- Managed swatch photos that remain available after the original source image is moved
+- TD Lab using the existing physical-roll records as its single source of truth
+- Stock TD entry and editing
+- Measured TD entry with a required measurement date
+- Stock-versus-measured difference display
+- Effective TD selection using measured TD first, then stock TD
+- A visible label showing whether the effective value is measured, stock, or missing
+- Search by color, brand, material, or roll code
+- Active, archived, and missing-measurement filters
+- TD coverage, measured-roll, and missing-measurement summaries
+- Managed swatch selection and replacement directly from TD Lab
 
-TD measurements, projects, quotes, palette assistance, and Gallery Studio remain later milestones.
+TD meter auto-import is not included. Measurements are entered manually. Projects, quotes, palette assistance, and Gallery Studio remain later milestones.
+
+## Effective TD rule
+
+When both values exist, the Hub uses the measured value:
+
+```js
+tdMeasured ?? tdStock
+```
+
+The interface always identifies the active source.
 
 ## Local data structure
 
-The app creates:
+The app stores live data outside the repository in:
 
 ```text
 Documents/
 └── Love's LayerWorks Hub/
-    ├── data/
-    │   └── hub-data.json
-    ├── images/
-    │   ├── swatches/
-    │   ├── originals/
-    │   └── finished/
+    ├── data/hub-data.json
+    ├── images/swatches/
+    ├── images/originals/
+    ├── images/finished/
     ├── exports/
-    └── backups/
-        └── hub-data/
+    └── backups/hub-data/
 ```
-
-GitHub stores the application source code. It does not store live inventory, photos, exports, or backups.
 
 ## Setup and launch
 
@@ -52,28 +56,19 @@ GitHub stores the application source code. It does not store live inventory, pho
 
 Run `setup.bat` only on first setup or when dependencies change.
 
-PowerShell users should use `npm.cmd`:
+## Milestone 2 acceptance test
 
-```powershell
-npm.cmd install
-npm.cmd run check
-npm.cmd start
-```
+1. Open TD Lab and confirm every inventory roll appears.
+2. Search for a roll by color, brand, material, and roll code.
+3. Enable **Missing measured TD only** and confirm measured rolls disappear.
+4. Open a roll with stock TD but no measured TD and confirm the effective source is **Stock**.
+5. Enter a measured TD without a date and confirm the save is refused.
+6. Enter measured TD and a measurement date, then save.
+7. Confirm the card shows stock TD, measured TD, their signed difference, and the date.
+8. Confirm the effective source changes to **Measured**.
+9. Close and reopen the app and confirm the TD record remains.
+10. Attach or replace a swatch from TD Lab, move or delete the source image, reopen the app, and confirm the managed swatch still displays.
+11. Clear measured TD and save; confirm measured date clears and effective TD falls back to stock.
+12. Clear both values and confirm effective TD displays **Missing**.
 
-## Milestone 1B acceptance test
-
-1. Confirm the full Documents folder structure is created automatically.
-2. Save inventory changes repeatedly.
-3. Confirm timestamped backups appear in `backups/hub-data/`.
-4. Make enough changes to create more than 10 backups and confirm only the 10 newest valid rolling backups remain.
-5. Attach a swatch image to a roll.
-6. Move or delete the original source image.
-7. Reopen the app and confirm the managed swatch still displays.
-8. Export the inventory and confirm a JSON file is created.
-9. Import that valid inventory export and confirm settings remain intact.
-10. Try importing an invalid JSON file and confirm the current data does not change.
-11. Restore a valid rolling backup.
-12. Export a full backup to a different chosen folder or drive.
-13. Confirm the full backup contains `hub-data.json`, `images/swatches`, `images/originals`, `images/finished`, `exports`, and `manifest.json`.
-
-Development stops after M1B until this test passes.
+Development stops after M2 until this test passes.
