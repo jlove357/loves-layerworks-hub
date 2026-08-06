@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data:">
+  <title>Love's LayerWorks Hub</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="shell">
+    <aside>
+      <div class="brand"><b>LL</b><span><strong id="appName">Love's LayerWorks Hub</strong><small>Shop operating workspace</small></span></div>
+      <nav role="tablist" aria-label="Main workspace">
+        <button id="inventory-tab" class="tab active" role="tab" aria-selected="true" data-tab="inventory" data-title="Inventory"><i>◫</i><span><strong>Inventory</strong><small>Roll Brain</small></span></button>
+        <button id="td-tab" class="tab" role="tab" aria-selected="false" data-tab="td" data-title="TD Lab" tabindex="-1"><i>◎</i><span><strong>TD Lab</strong><small>Measurements</small></span></button>
+        <button id="planner-tab" class="tab" role="tab" aria-selected="false" data-tab="planner" data-title="Quote & Palette Planner" tabindex="-1"><i>◇</i><span><strong>Quote & Palette</strong><small>Projects and pricing</small></span></button>
+        <button id="gallery-tab" class="tab" role="tab" aria-selected="false" data-tab="gallery" data-title="Gallery Studio" tabindex="-1"><i>▦</i><span><strong>Gallery Studio</strong><small>Finished work</small></span></button>
+      </nav>
+      <div class="local"><em></em><span><strong>Local-only app</strong><small>No account, cloud, or internet required after setup.</small></span></div>
+    </aside>
+
+    <main>
+      <header><div><small>LOVE'S LAYERWORKS</small><h1 id="pageTitle">Inventory</h1></div><span class="badge"><b id="milestone">M0</b> Foundation</span></header>
+
+      <section id="inventory-panel" role="tabpanel" aria-labelledby="inventory-tab">
+        <article class="hero"><div><small>ROLL BRAIN</small><h2>Know what is on the shelf.</h2><p>Physical roll tracking, remaining weight, cost, location, TD values, and low-stock warnings will live here.</p></div><div class="soon"><span>Inventory</span><b>Coming Soon</b><small>Milestone 1A</small></div></article>
+        <div class="cards"><article><b>Physical rolls</b><p>One stable record for every spool.</p></article><article><b>Weight and value</b><p>Usable grams, cost, and remaining value.</p></article><article><b>Shop location</b><p>Searchable storage and bin locations.</p></article></div>
+      </section>
+
+      <section id="td-panel" role="tabpanel" aria-labelledby="td-tab" hidden>
+        <article class="hero"><div><small>MEASUREMENT WORKSPACE</small><h2>Give every roll a reliable TD record.</h2><p>Compare stock and personally measured transmission-distance values while preserving measurement dates and swatch photos.</p></div><div class="soon"><span>TD Lab</span><b>Coming Soon</b><small>Milestone 2</small></div></article>
+        <div class="cards"><article><b>Stock TD</b><p>Keep manufacturer and library baselines.</p></article><article><b>Measured TD</b><p>Record meter results and effective values.</p></article><article><b>Swatch photos</b><p>Store managed local reference images.</p></article></div>
+      </section>
+
+      <section id="planner-panel" role="tabpanel" aria-labelledby="planner-tab" hidden>
+        <article class="hero"><div><small>PROJECT DESK</small><h2>Quote work using real shop data.</h2><p>Create projects, estimate material and time, check available stock, and later compare nearby inventory colors.</p></div><div class="soon"><span>Planner</span><b>Coming Soon</b><small>Milestone 3A</small></div></article>
+        <div class="cards"><article><b>Manual quotes</b><p>Estimate material, machine time, and price.</p></article><article><b>Stock checks</b><p>Know when a job needs another roll.</p></article><article><b>Palette help</b><p>Later, shortlist nearby inventory colors.</p></article></div>
+      </section>
+
+      <section id="gallery-panel" role="tabpanel" aria-labelledby="gallery-tab" hidden>
+        <article class="hero"><div><small>FINISHED WORK</small><h2>Turn completed projects into a usable portfolio.</h2><p>Browse finished records, preserve photos, and prepare offline gallery exports and caption drafts.</p></div><div class="soon"><span>Gallery</span><b>Coming Soon</b><small>Milestone 4A</small></div></article>
+        <div class="cards"><article><b>Project gallery</b><p>Use completed project records directly.</p></article><article><b>Managed photos</b><p>Keep originals and finished photos organized.</p></article><article><b>Offline exports</b><p>Create shareable images and captions later.</p></article></div>
+      </section>
+
+      <footer><span><b>Milestone 0:</b> Purple shell and tab navigation</span><span class="ready"><i></i>Ready for local testing</span></footer>
+    </main>
+  </div>
+  <script src="renderer.js"></script>
+</body>
+</html>
