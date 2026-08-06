@@ -1,12 +1,12 @@
 {
   "name": "loves-layerworks-hub",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "description": "Local Windows desktop operating hub for Love's LayerWorks",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "check": "node --check main.js && node --check preload.js && node --check renderer.js"
+    "check": "node --check main.js && node --check hub-config.js && node --check hub-validation.js && node --check hub-persistence.js && node --check image-service.js && node --check inventory-transfer.js && node --check backup-service.js && node --check preload.js && node --check renderer-state.js && node --check renderer-cards.js && node --check renderer-form.js && node --check renderer-save.js && node --check renderer-weight.js && node --check renderer-safety.js"
   },
   "devDependencies": {
     "electron": "latest"
