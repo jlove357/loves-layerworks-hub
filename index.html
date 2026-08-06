@@ -41,7 +41,7 @@
         <div><small>LOVE'S LAYERWORKS</small><h1 id="pageTitle">Inventory</h1></div>
         <div class="header-actions">
           <span id="status" class="status" data-tone="neutral" aria-live="polite">Loading local inventory</span>
-          <span class="badge"><b id="milestone">M1A</b> Roll Brain</span>
+          <span class="badge"><b id="milestone">M1B</b> Data Safety</span>
         </div>
       </header>
 
@@ -49,8 +49,8 @@
         <article class="inventory-hero">
           <div>
             <small>ROLL BRAIN</small>
-            <h2>Know exactly what is on the shelf.</h2>
-            <p>Track each physical roll, usable filament weight, purchase cost, storage location, stock TD, and remaining inventory value.</p>
+            <h2>Inventory with a safety net.</h2>
+            <p>Track every physical roll, keep swatch photos inside managed storage, and protect the complete Hub file with verified rolling and external backups.</p>
           </div>
           <button id="addRollHero" class="primary large" type="button">Add a filament roll</button>
         </article>
@@ -69,22 +69,9 @@
           </div>
 
           <div class="filters">
-            <label class="search-field">
-              <span>Search rolls</span>
-              <input id="searchRolls" type="search" placeholder="Color, brand, material, code, or location">
-            </label>
-            <label>
-              <span>Show</span>
-              <select id="statusFilter">
-                <option value="active">Active rolls</option>
-                <option value="all">Active and archived</option>
-                <option value="archived">Archived rolls</option>
-              </select>
-            </label>
-            <label class="check-filter">
-              <input id="lowStockOnly" type="checkbox">
-              <span><strong>Low stock only</strong><small id="lowStockFilterText">Under 200 g</small></span>
-            </label>
+            <label class="search-field"><span>Search rolls</span><input id="searchRolls" type="search" placeholder="Color, brand, material, code, or location"></label>
+            <label><span>Show</span><select id="statusFilter"><option value="active">Active rolls</option><option value="all">Active and archived</option><option value="archived">Archived rolls</option></select></label>
+            <label class="check-filter"><input id="lowStockOnly" type="checkbox"><span><strong>Low stock only</strong><small id="lowStockFilterText">Under 200 g</small></span></label>
           </div>
 
           <div id="inventoryNotice" class="notice" hidden></div>
@@ -96,44 +83,61 @@
           </div>
         </article>
 
-        <p class="data-path-note"><strong>Local data:</strong> <code id="dataPath">Resolving Documents folder...</code></p>
+        <article class="workspace-card safety-card">
+          <div class="workspace-head">
+            <div><small>DATA SAFETY</small><h2>Backups, import, and export</h2></div>
+            <span id="backupCount" class="backup-count">0 rolling backups</span>
+          </div>
+          <p class="section-intro">Each verified save keeps the previous working file as a timestamped backup. Only the 10 newest rolling backups are retained.</p>
+
+          <div class="safety-grid">
+            <section>
+              <h3>Inventory file</h3>
+              <p>Export or replace only the filament collection. Settings and projects stay untouched.</p>
+              <div class="button-row">
+                <button id="exportInventory" type="button">Export inventory</button>
+                <button id="importInventory" type="button">Import inventory</button>
+              </div>
+            </section>
+            <section>
+              <h3>Restore a rolling backup</h3>
+              <p>Choose a previously verified Hub file. The current file is preserved before restoration.</p>
+              <label><span>Available backups</span><select id="backupSelect"><option value="">No backups available</option></select></label>
+              <button id="restoreBackup" type="button">Restore selected backup</button>
+            </section>
+            <section>
+              <h3>Full external backup</h3>
+              <p>Copy data, managed images, exports, and a manifest to a USB drive or another chosen folder.</p>
+              <button id="exportFullBackup" class="primary" type="button">Export full backup</button>
+            </section>
+          </div>
+
+          <div class="path-grid">
+            <p><strong>Live data:</strong> <code id="dataPath">Resolving Documents folder…</code></p>
+            <p><strong>Rolling backups:</strong> <code id="backupPath">Resolving backup folder…</code></p>
+          </div>
+        </article>
       </section>
 
       <section id="td-panel" role="tabpanel" aria-labelledby="td-tab" hidden>
-        <article class="coming-card">
-          <div><small>MEASUREMENT WORKSPACE</small><h2>TD Lab</h2><p>Stock and personally measured transmission-distance records will be built after the inventory foundation is approved.</p></div>
-          <span><b>Coming Soon</b><small>Milestone 2</small></span>
-        </article>
+        <article class="coming-card"><div><small>MEASUREMENT WORKSPACE</small><h2>TD Lab</h2><p>Stock and personally measured transmission-distance records will be built after the complete inventory safety layer is approved.</p></div><span><b>Coming Soon</b><small>Milestone 2</small></span></article>
       </section>
 
       <section id="planner-panel" role="tabpanel" aria-labelledby="planner-tab" hidden>
-        <article class="coming-card">
-          <div><small>PROJECT DESK</small><h2>Quote & Palette Planner</h2><p>Customer projects, manual quotes, inventory checks, and later palette assistance will use the physical rolls created in Roll Brain.</p></div>
-          <span><b>Coming Soon</b><small>Milestone 3A</small></span>
-        </article>
+        <article class="coming-card"><div><small>PROJECT DESK</small><h2>Quote & Palette Planner</h2><p>Customer projects and manual quotes will use the physical rolls created in Roll Brain.</p></div><span><b>Coming Soon</b><small>Milestone 3A</small></span></article>
       </section>
 
       <section id="gallery-panel" role="tabpanel" aria-labelledby="gallery-tab" hidden>
-        <article class="coming-card">
-          <div><small>FINISHED WORK</small><h2>Gallery Studio</h2><p>Finished project records, managed photos, portfolio exports, and offline caption drafts will be added after the core shop tool is complete.</p></div>
-          <span><b>Coming Soon</b><small>Milestone 4A</small></span>
-        </article>
+        <article class="coming-card"><div><small>FINISHED WORK</small><h2>Gallery Studio</h2><p>Finished project records, managed photos, portfolio exports, and offline caption drafts remain later milestones.</p></div><span><b>Coming Soon</b><small>Milestone 4A</small></span></article>
       </section>
 
-      <footer>
-        <span><b>Milestone 1A:</b> Inventory and JSON persistence</span>
-        <span class="ready"><i></i>Ready for local testing</span>
-      </footer>
+      <footer><span><b>Milestone 1B:</b> Backups, managed images, import, and export</span><span class="ready"><i></i>Ready for local testing</span></footer>
     </main>
   </div>
 
   <dialog id="rollDialog" class="modal">
     <form id="rollForm" novalidate>
-      <div class="modal-head">
-        <div><small>PHYSICAL FILAMENT ROLL</small><h2 id="rollDialogTitle">Add roll</h2></div>
-        <button id="closeRollDialog" class="icon-button" type="button" aria-label="Close">×</button>
-      </div>
-
+      <div class="modal-head"><div><small>PHYSICAL FILAMENT ROLL</small><h2 id="rollDialogTitle">Add roll</h2></div><button id="closeRollDialog" class="icon-button" type="button" aria-label="Close">×</button></div>
       <div class="form-grid">
         <label>Roll code <span class="required">Required</span><input id="rollCode" type="text" maxlength="80" placeholder="SUN-BLACK-001" required></label>
         <label>Brand <span class="required">Required</span><input id="brand" type="text" maxlength="80" placeholder="SUNLU" required></label>
@@ -147,34 +151,45 @@
         <label>Purchase cost<input id="purchaseCost" type="number" min="0" step="0.01" value="0"><small>Dollars paid for this roll</small></label>
         <label>Purchase date<input id="purchaseDate" type="date"></label>
         <label>Stock TD<input id="tdStock" type="number" min="0" step="0.01" placeholder="Optional"><small>Manufacturer or library value in mm</small></label>
+
+        <section class="swatch-field wide">
+          <div>
+            <span>Swatch photo</span>
+            <small>The selected image will be copied into managed Hub storage when the roll saves.</small>
+          </div>
+          <div class="swatch-controls">
+            <div id="swatchPreview" class="swatch-preview"><span>No swatch attached</span></div>
+            <div>
+              <button id="chooseSwatch" type="button">Choose image</button>
+              <button id="removeSwatch" type="button">Remove image</button>
+              <p id="swatchFileName">No file selected</p>
+            </div>
+          </div>
+        </section>
+
         <label class="wide">Notes<textarea id="rollNotes" rows="4" maxlength="1000" placeholder="Batch notes, print observations, or reminders"></textarea></label>
       </div>
-
       <p id="rollFormError" class="form-error" role="alert" hidden></p>
-      <div class="modal-actions">
-        <button id="cancelRoll" type="button">Cancel</button>
-        <button id="saveRoll" class="primary" type="submit">Save roll</button>
-      </div>
+      <div class="modal-actions"><button id="cancelRoll" type="button">Cancel</button><button id="saveRoll" class="primary" type="submit">Save roll</button></div>
     </form>
   </dialog>
 
   <dialog id="subtractDialog" class="modal small-modal">
     <form id="subtractForm" novalidate>
-      <div class="modal-head">
-        <div><small>MANUAL WEIGHT ADJUSTMENT</small><h2>Subtract filament</h2></div>
-        <button id="closeSubtractDialog" class="icon-button" type="button" aria-label="Close">×</button>
-      </div>
+      <div class="modal-head"><div><small>MANUAL WEIGHT ADJUSTMENT</small><h2>Subtract filament</h2></div><button id="closeSubtractDialog" class="icon-button" type="button" aria-label="Close">×</button></div>
       <p id="subtractRollName" class="modal-intro"></p>
       <label>Grams used<input id="subtractAmount" type="number" min="0.1" step="0.1" required></label>
       <p id="subtractRemaining" class="calculation-preview"></p>
       <p id="subtractError" class="form-error" role="alert" hidden></p>
-      <div class="modal-actions">
-        <button id="cancelSubtract" type="button">Cancel</button>
-        <button class="primary" type="submit">Subtract weight</button>
-      </div>
+      <div class="modal-actions"><button id="cancelSubtract" type="button">Cancel</button><button class="primary" type="submit">Subtract weight</button></div>
     </form>
   </dialog>
 
-  <script src="renderer.js"></script>
+  <script src="renderer-state.js"></script>
+  <script src="renderer-cards.js"></script>
+  <script src="renderer-form.js"></script>
+  <script src="renderer-save.js"></script>
+  <script src="renderer-weight.js"></script>
+  <script src="renderer-safety.js"></script>
 </body>
 </html>
