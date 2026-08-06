@@ -2,17 +2,37 @@
 
 A private, local Windows desktop workspace for Love's LayerWorks.
 
-## Active milestone: M0
+## Active milestone: M1A — Inventory and JSON Persistence
 
 The current runnable version provides:
 
-- A dark purple Electron desktop shell
-- Four working top-level tabs: Inventory, TD Lab, Quote & Palette Planner, and Gallery Studio
-- A clear `Coming Soon` state for unfinished workspaces
-- Secure Electron settings with context isolation enabled and Node access disabled in the renderer
-- Beginner-friendly Windows setup and launch files
+- The dark purple four-tab Electron shell
+- Roll Brain inventory for individual physical filament rolls
+- Add and edit controls for roll code, brand, material, color, weights, cost, location, stock TD, purchase date, and notes
+- Stable UUIDs for every roll
+- Search by color, brand, material, roll code, or storage location
+- Active, archived, and low-stock filters
+- Manual filament-weight subtraction with below-zero protection
+- Archive and restore controls
+- Permanent deletion for rolls without project references
+- Active roll count, low-stock count, usable weight, and remaining inventory value
+- A single schema-versioned `hub-data.json` file stored outside the repository
+- Verified local saves that survive closing and reopening the app
 
-No shop data is stored during M0.
+TD measurements, swatch photos, rolling backups, import/export, projects, quotes, and Gallery Studio are not active yet.
+
+## Local data location
+
+The app creates:
+
+```text
+Documents/
+└── Love's LayerWorks Hub/
+    └── data/
+        └── hub-data.json
+```
+
+GitHub stores the application source code. It does not store the live inventory file.
 
 ## First-time setup
 
@@ -33,12 +53,18 @@ npm.cmd run check
 npm.cmd start
 ```
 
-## Milestone 0 acceptance test
+## Milestone 1A acceptance test
 
-1. Run `setup.bat`.
-2. Run `launch.bat`.
-3. Confirm the purple window opens.
-4. Confirm all four tabs switch correctly.
-5. Close and reopen the app.
+1. Add two rolls.
+2. Close the app.
+3. Reopen the app and confirm both rolls remain.
+4. Edit one roll.
+5. Subtract filament weight.
+6. Try to subtract more than remains and confirm the app refuses.
+7. Search by brand and color.
+8. Filter rolls below 200 grams.
+9. Archive a roll.
+10. Delete an unreferenced roll after confirmation.
+11. Confirm remaining inventory value updates correctly.
 
-Development stops after M0 until this test passes.
+Development stops after M1A until this test passes.
