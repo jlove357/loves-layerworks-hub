@@ -75,6 +75,10 @@ async function selectProjectImage() {
   return selectImage('Choose a customer reference image', 'reference image');
 }
 
+async function selectFinishedImage() {
+  return selectImage('Choose a finished-print photo', 'finished-print photo');
+}
+
 async function copySwatchImage(_event, request) {
   const paths = await ensureHubStructure();
   return copyManagedImage({
@@ -93,6 +97,17 @@ async function copyProjectImage(_event, request) {
     recordId: requiredText(request?.projectId, 'Project ID'),
     directory: paths.originalsDir,
     relativeDirectory: 'images/originals',
+    label: 'project'
+  });
+}
+
+async function copyFinishedImage(_event, request) {
+  const paths = await ensureHubStructure();
+  return copyManagedImage({
+    sourcePath: request?.sourcePath,
+    recordId: requiredText(request?.projectId, 'Project ID'),
+    directory: paths.finishedDir,
+    relativeDirectory: 'images/finished',
     label: 'project'
   });
 }
@@ -121,8 +136,10 @@ async function deleteManagedImage(_event, relativePath) {
 module.exports = {
   selectSwatchImage,
   selectProjectImage,
+  selectFinishedImage,
   copySwatchImage,
   copyProjectImage,
+  copyFinishedImage,
   readManagedImage,
   deleteManagedImage
 };
