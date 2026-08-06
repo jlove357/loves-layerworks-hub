@@ -1,9 +1,8 @@
 const { app } = require('electron');
 const fs = require('node:fs/promises');
 const path = require('node:path');
-const crypto = require('node:crypto');
 
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
 const MAX_BACKUPS = 10;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const HEX_PATTERN = /^#[0-9a-f]{6}$/i;
@@ -17,11 +16,17 @@ const MIME_BY_EXTENSION = {
 
 const DEFAULT_SETTINGS = Object.freeze({
   lowStockThresholdG: 200,
-  machineRatePerHour: 0,
-  defaultDesignFee: 0,
-  materialMarkupPercent: 0,
-  targetMarginPercent: 0,
-  galleryBrandLabel: "Love's LayerWorks"
+  galleryBrandLabel: "Love's LayerWorks",
+  electricityCostPerKwh: 0.16,
+  machineWearCostPerHour: 0.20,
+  avgPrinterWattage: 350,
+  failureRatePercent: 0.15,
+  targetMarginPercent: 0.35,
+  boxCost: 2.50,
+  packingLaborMinutes: 20,
+  packingLaborRatePerHour: 20,
+  defaultFrameCost: 10,
+  defaultDesignFee: 0
 });
 
 function hubRootPath() {
@@ -108,9 +113,29 @@ function timestamp(value, fallback) {
   return new Date(text).toISOString();
 }
 
+function nullableTimestamp(value, label) {
+  const text = asText(value);
+  if (!text) return null;
+  if (Number.isNaN(Date.parse(text))) throw new Error(`${label} must be a valid timestamp.`);
+  return new Date(text).toISOString();
+}
 
 module.exports = {
-  SCHEMA_VERSION, MAX_BACKUPS, UUID_PATTERN, HEX_PATTERN, IMAGE_EXTENSIONS, MIME_BY_EXTENSION,
-  DEFAULT_SETTINGS, hubPaths, ensureHubStructure, createDefaultData, asText, requiredText,
-  finiteNumber, nullableNumber, nullableDate, timestamp
+  SCHEMA_VERSION,
+  MAX_BACKUPS,
+  UUID_PATTERN,
+  HEX_PATTERN,
+  IMAGE_EXTENSIONS,
+  MIME_BY_EXTENSION,
+  DEFAULT_SETTINGS,
+  hubPaths,
+  ensureHubStructure,
+  createDefaultData,
+  asText,
+  requiredText,
+  finiteNumber,
+  nullableNumber,
+  nullableDate,
+  timestamp,
+  nullableTimestamp
 };

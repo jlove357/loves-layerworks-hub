@@ -90,12 +90,13 @@ async function load() {
     state.data = result.data;
     renderAll();
     setInventoryDisabled(false);
-    setStatus(result.created ? 'Local inventory file created' : 'Local inventory and backups loaded', 'success');
+    if (result.migrated) setStatus('Local data migrated to the locked M3A pricing schema', 'success');
+    else setStatus(result.created ? 'Local inventory file created' : 'Local inventory, projects, and backups loaded', 'success');
   } catch (error) {
     console.error(error);
     state.loadFailed = true;
     setInventoryDisabled(true, error.message);
-    setStatus('Inventory could not be loaded', 'error');
+    setStatus('Hub data could not be loaded', 'error');
   }
 }
 
@@ -143,21 +144,25 @@ $('#restoreBackup').addEventListener('click', restoreBackup);
 $('#exportFullBackup').addEventListener('click', exportFullBackup);
 
 $('#appName').textContent = window.layerWorks?.appName || "Love's LayerWorks Hub";
-$('#milestone').textContent = window.layerWorks?.milestone || 'M1B';
+$('#milestone').textContent = window.layerWorks?.milestone || 'M3A';
 activateTab('inventory');
 load();
 
-function loadM2TDLab() {
-  const logicScript = document.createElement('script');
-  logicScript.src = 'td-logic.js';
-  logicScript.addEventListener('load', () => {
-    const tdScript = document.createElement('script');
-    tdScript.src = 'renderer-td.js';
-    tdScript.addEventListener('error', () => setStatus('TD Lab failed to load', 'error'));
-    document.body.append(tdScript);
+function loadFeatureScript(source) {
+  return new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = source;
+    script.addEventListener('load', resolve, { once: true });
+    script.addEventListener('error', () => reject(new Error(`${source} failed to load.`)), { once: true });
+    document.body.append(script);
   });
-  logicScript.addEventListener('error', () => setStatus('TD Lab logic failed to load', 'error'));
-  document.body.append(logicScript);
 }
 
-loadM2TDLab();
+loadFeatureScript('td-logic.js')
+  .then(() => loadFeatureScript('renderer-td.js'))
+  .then(() => loadFeatureScript('quote-logic.js'))
+  .then(() => loadFeatureScript('renderer-projects.js'))
+  .catch((error) => {
+    console.error(error);
+    setStatus(`Feature load failed: ${error.message}`, 'error');
+  });

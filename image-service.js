@@ -2,8 +2,17 @@ const { dialog } = require('electron');
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const crypto = require('node:crypto');
-const { UUID_PATTERN, IMAGE_EXTENSIONS, MIME_BY_EXTENSION, hubPaths, ensureHubStructure, requiredText } = require('./hub-config');
+const {
+  UUID_PATTERN,
+  IMAGE_EXTENSIONS,
+  MIME_BY_EXTENSION,
+  hubPaths,
+  ensureHubStructure,
+  requiredText
+} = require('./hub-config');
 const { normalizeManagedRelativePath } = require('./hub-validation');
+
+const MAX_IMAGE_BYTES = 25 * 1024 * 1024;
 
 function resolveManagedPath(relativePath) {
   const normalized = normalizeManagedRelativePath(relativePath);
@@ -16,19 +25,25 @@ function resolveManagedPath(relativePath) {
   return resolved;
 }
 
-async function selectSwatchImage() {
+async function inspectSourceImage(sourcePath, label = 'image') {
+  const resolved = path.resolve(requiredText(sourcePath, 'Image source path'));
+  const extension = path.extname(resolved).toLowerCase();
+  if (!IMAGE_EXTENSIONS.has(extension)) throw new Error('Choose a PNG, JPG, JPEG, or WEBP image.');
+  const stats = await fs.stat(resolved);
+  if (!stats.isFile() || stats.size <= 0) throw new Error(`The selected ${label} is empty or unavailable.`);
+  if (stats.size > MAX_IMAGE_BYTES) throw new Error(`Choose a ${label} smaller than 25 MB.`);
+  return { resolved, extension, stats };
+}
+
+async function selectImage(title, label) {
   const result = await dialog.showOpenDialog({
-    title: 'Choose a filament swatch photo',
+    title,
     properties: ['openFile'],
     filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'webp'] }]
   });
   if (result.canceled || !result.filePaths[0]) return { canceled: true };
   const sourcePath = result.filePaths[0];
-  const extension = path.extname(sourcePath).toLowerCase();
-  if (!IMAGE_EXTENSIONS.has(extension)) throw new Error('Choose a PNG, JPG, JPEG, or WEBP image.');
-  const stats = await fs.stat(sourcePath);
-  if (!stats.isFile() || stats.size <= 0) throw new Error('The selected image is empty or unavailable.');
-  if (stats.size > 25 * 1024 * 1024) throw new Error('Choose a swatch image smaller than 25 MB.');
+  const { extension } = await inspectSourceImage(sourcePath, label);
   const buffer = await fs.readFile(sourcePath);
   return {
     canceled: false,
@@ -38,26 +53,48 @@ async function selectSwatchImage() {
   };
 }
 
+async function copyManagedImage({ sourcePath, recordId, directory, relativeDirectory, label }) {
+  if (!UUID_PATTERN.test(recordId)) throw new Error(`The ${label} ID is invalid.`);
+  const { resolved, extension, stats } = await inspectSourceImage(sourcePath, label);
+  const fileName = `${recordId}-${crypto.randomUUID()}${extension}`;
+  const destination = path.join(directory, fileName);
+  await fs.copyFile(resolved, destination);
+  const copiedStats = await fs.stat(destination);
+  if (copiedStats.size !== stats.size) {
+    await fs.rm(destination, { force: true });
+    throw new Error(`The managed ${label} copy did not verify correctly.`);
+  }
+  return { ok: true, relativePath: `${relativeDirectory}/${fileName}` };
+}
+
+async function selectSwatchImage() {
+  return selectImage('Choose a filament swatch photo', 'swatch image');
+}
+
+async function selectProjectImage() {
+  return selectImage('Choose a customer reference image', 'reference image');
+}
+
 async function copySwatchImage(_event, request) {
   const paths = await ensureHubStructure();
-  const sourcePath = path.resolve(requiredText(request?.sourcePath, 'Image source path'));
-  const rollId = requiredText(request?.rollId, 'Roll ID');
-  if (!UUID_PATTERN.test(rollId)) throw new Error('The roll ID is invalid.');
-  const extension = path.extname(sourcePath).toLowerCase();
-  if (!IMAGE_EXTENSIONS.has(extension)) throw new Error('Choose a PNG, JPG, JPEG, or WEBP image.');
+  return copyManagedImage({
+    sourcePath: request?.sourcePath,
+    recordId: requiredText(request?.rollId, 'Roll ID'),
+    directory: paths.swatchesDir,
+    relativeDirectory: 'images/swatches',
+    label: 'roll'
+  });
+}
 
-  const sourceStats = await fs.stat(sourcePath);
-  if (!sourceStats.isFile() || sourceStats.size <= 0) throw new Error('The selected image is empty or unavailable.');
-  if (sourceStats.size > 25 * 1024 * 1024) throw new Error('Choose a swatch image smaller than 25 MB.');
-  const fileName = `${rollId}-${crypto.randomUUID()}${extension}`;
-  const destination = path.join(paths.swatchesDir, fileName);
-  await fs.copyFile(sourcePath, destination);
-  const copiedStats = await fs.stat(destination);
-  if (copiedStats.size !== sourceStats.size) {
-    await fs.rm(destination, { force: true });
-    throw new Error('The managed swatch copy did not verify correctly.');
-  }
-  return { ok: true, relativePath: `images/swatches/${fileName}` };
+async function copyProjectImage(_event, request) {
+  const paths = await ensureHubStructure();
+  return copyManagedImage({
+    sourcePath: request?.sourcePath,
+    recordId: requiredText(request?.projectId, 'Project ID'),
+    directory: paths.originalsDir,
+    relativeDirectory: 'images/originals',
+    label: 'project'
+  });
 }
 
 async function readManagedImage(_event, relativePath) {
@@ -81,5 +118,11 @@ async function deleteManagedImage(_event, relativePath) {
   return { ok: true };
 }
 
-
-module.exports = { selectSwatchImage, copySwatchImage, readManagedImage, deleteManagedImage };
+module.exports = {
+  selectSwatchImage,
+  selectProjectImage,
+  copySwatchImage,
+  copyProjectImage,
+  readManagedImage,
+  deleteManagedImage
+};

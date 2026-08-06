@@ -1,9 +1,8 @@
 const { dialog } = require('electron');
 const fs = require('node:fs/promises');
-const { SCHEMA_VERSION } = require('./hub-config');
+const { SCHEMA_VERSION, hubPaths } = require('./hub-config');
 const { normalizeHubData } = require('./hub-validation');
 const { readJsonFile, loadHubData, persistHubData, listValidBackups } = require('./hub-persistence');
-const { hubPaths } = require('./hub-config');
 
 async function exportInventory() {
   const loaded = await loadHubData();
@@ -51,7 +50,8 @@ async function importInventory() {
   if (imported?.exportType !== 'loves-layerworks-inventory') {
     throw new Error('This is not a Love\'s LayerWorks inventory export.');
   }
-  if (Number(imported.schemaVersion) !== SCHEMA_VERSION || !Array.isArray(imported.filaments)) {
+  const importVersion = Number(imported.schemaVersion);
+  if (![1, SCHEMA_VERSION].includes(importVersion) || !Array.isArray(imported.filaments)) {
     throw new Error('The inventory export schema is unsupported or incomplete.');
   }
 
@@ -75,6 +75,5 @@ async function importInventory() {
     backups: await listValidBackups()
   };
 }
-
 
 module.exports = { exportInventory, importInventory };

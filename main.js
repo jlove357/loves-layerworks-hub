@@ -2,14 +2,21 @@ const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('node:path');
 const { hubPaths, ensureHubStructure } = require('./hub-config');
 const { listValidBackups, persistHubData, loadHubData } = require('./hub-persistence');
-const { selectSwatchImage, copySwatchImage, readManagedImage, deleteManagedImage } = require('./image-service');
+const {
+  selectSwatchImage,
+  selectProjectImage,
+  copySwatchImage,
+  copyProjectImage,
+  readManagedImage,
+  deleteManagedImage
+} = require('./image-service');
 const { exportInventory, importInventory } = require('./inventory-transfer');
 const { dataStatus, restoreBackup, exportFullBackup } = require('./backup-service');
 
 function createWindow() {
   const window = new BrowserWindow({
-    width: 1400,
-    height: 920,
+    width: 1440,
+    height: 940,
     minWidth: 1080,
     minHeight: 720,
     title: "Love's LayerWorks Hub",
@@ -37,7 +44,9 @@ app.whenReady().then(async () => {
   })));
   ipcMain.handle('hub:data-status', dataStatus);
   ipcMain.handle('hub:select-swatch-image', selectSwatchImage);
+  ipcMain.handle('hub:select-project-image', selectProjectImage);
   ipcMain.handle('hub:copy-swatch-image', copySwatchImage);
+  ipcMain.handle('hub:copy-project-image', copyProjectImage);
   ipcMain.handle('hub:read-managed-image', readManagedImage);
   ipcMain.handle('hub:delete-managed-image', deleteManagedImage);
   ipcMain.handle('hub:export-inventory', exportInventory);
