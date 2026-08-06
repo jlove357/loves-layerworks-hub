@@ -1,7 +1,7 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const crypto = require('node:crypto');
-const { MAX_BACKUPS, hubPaths, ensureHubStructure, createDefaultData } = require('./hub-config');
+const { SCHEMA_VERSION, MAX_BACKUPS, hubPaths, ensureHubStructure, createDefaultData } = require('./hub-config');
 const { normalizeHubData } = require('./hub-validation');
 
 async function readJsonFile(filePath) {
@@ -58,7 +58,8 @@ async function listValidBackups() {
         fileName: entry.name,
         savedAt: data.updatedAt,
         modifiedAt: stats.mtime.toISOString(),
-        rollCount: data.filaments.length
+        rollCount: data.filaments.length,
+        projectCount: data.projects.length
       });
     } catch {
       // Invalid backup files remain available for inspection but are not offered for restoration.
@@ -130,12 +131,31 @@ async function loadHubData() {
   const paths = await ensureHubStructure();
   await recoverInterruptedSave(paths);
   try {
-    const data = await readValidatedHubData(paths.dataFile);
-    return { ok: true, data, path: paths.dataFile, created: false, backups: await listValidBackups() };
+    const raw = await readJsonFile(paths.dataFile);
+    const normalized = normalizeHubData(raw);
+    if (Number(raw.schemaVersion ?? 1) !== SCHEMA_VERSION) {
+      const migrated = await persistHubData(normalized);
+      return {
+        ok: true,
+        data: migrated,
+        path: paths.dataFile,
+        created: false,
+        migrated: true,
+        backups: await listValidBackups()
+      };
+    }
+    return {
+      ok: true,
+      data: normalized,
+      path: paths.dataFile,
+      created: false,
+      migrated: false,
+      backups: await listValidBackups()
+    };
   } catch (error) {
     if (error.code === 'ENOENT') {
       const data = await persistHubData(createDefaultData(), { createBackup: false });
-      return { ok: true, data, path: paths.dataFile, created: true, backups: [] };
+      return { ok: true, data, path: paths.dataFile, created: true, migrated: false, backups: [] };
     }
     return {
       ok: false,
@@ -146,7 +166,12 @@ async function loadHubData() {
   }
 }
 
-
 module.exports = {
-  readJsonFile, readValidatedHubData, safeTimestamp, fileExists, listValidBackups, persistHubData, loadHubData
+  readJsonFile,
+  readValidatedHubData,
+  safeTimestamp,
+  fileExists,
+  listValidBackups,
+  persistHubData,
+  loadHubData
 };
