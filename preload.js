@@ -2,7 +2,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('layerWorks', {
   appName: "Love's LayerWorks Hub",
-  milestone: 'V2.1 PF1',
+  milestone: 'V2.1 PF2',
   loadData: () => ipcRenderer.invoke('hub:load-data'),
   saveData: (data) => ipcRenderer.invoke('hub:save-data', data),
   dataStatus: () => ipcRenderer.invoke('hub:data-status'),
@@ -20,9 +20,22 @@ contextBridge.exposeInMainWorld('layerWorks', {
   openProductionFile: (relativePath) => ipcRenderer.invoke('hub:open-production-file', relativePath),
   showProductionFile: (relativePath) => ipcRenderer.invoke('hub:show-production-file', relativePath),
   deleteProductionFile: (relativePath) => ipcRenderer.invoke('hub:delete-production-file', relativePath),
+  productionStorageStatus: () => ipcRenderer.invoke('hub:production-storage-status'),
+  checkProjectProductionFiles: (projectId) => ipcRenderer.invoke('hub:check-project-production-files', projectId),
+  verifyProductionLibrary: () => ipcRenderer.invoke('hub:verify-production-library'),
+  cancelProductionStorageOperation: (operationId) => ipcRenderer.invoke('hub:cancel-production-storage-operation', operationId),
+  relocateProductionStorage: (mode) => ipcRenderer.invoke('hub:relocate-production-storage', mode),
   onProductionFileProgress: (callback) => {
     if (typeof callback !== 'function') return;
     ipcRenderer.on('hub:production-file-progress', (_event, payload) => callback(payload));
+  },
+  onProductionIntegrityProgress: (callback) => {
+    if (typeof callback !== 'function') return;
+    ipcRenderer.on('hub:production-integrity-progress', (_event, payload) => callback(payload));
+  },
+  onProductionStorageProgress: (callback) => {
+    if (typeof callback !== 'function') return;
+    ipcRenderer.on('hub:production-storage-progress', (_event, payload) => callback(payload));
   },
   saveGalleryExport: (request) => ipcRenderer.invoke('hub:save-gallery-export', request),
   revealGalleryExport: (relativePath) => ipcRenderer.invoke('hub:reveal-gallery-export', relativePath),

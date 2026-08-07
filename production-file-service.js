@@ -5,36 +5,17 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const { Transform } = require('node:stream');
 const { pipeline } = require('node:stream/promises');
-const {
-  UUID_PATTERN,
-  hubPaths,
-  ensureHubStructure,
-  requiredText
-} = require('./hub-config');
-const { normalizeProductionRelativePath } = require('./hub-validation');
+const { UUID_PATTERN, requiredText } = require('./hub-config');
 const logic = require('./production-file-logic');
+const {
+  COPY_SAFETY_BUFFER_BYTES,
+  resolveProductionPath,
+  resolveProjectProductionDir,
+  ensureProductionStorage,
+  freeSpaceFor
+} = require('./production-storage-service');
 
 const activeCopies = new Map();
-
-function resolveProductionPath(relativePath) {
-  const normalized = normalizeProductionRelativePath(relativePath);
-  if (!normalized) throw new Error('No production file path was provided.');
-  const root = path.resolve(hubPaths().root);
-  const resolved = path.resolve(root, normalized);
-  if (resolved !== root && !resolved.startsWith(`${root}${path.sep}`)) {
-    throw new Error('Production file path escaped the Hub folder.');
-  }
-  return resolved;
-}
-
-function resolveProjectProductionDir(projectId) {
-  const id = requiredText(projectId, 'Project ID');
-  if (!UUID_PATTERN.test(id)) throw new Error('The project ID is invalid.');
-  const root = path.resolve(hubPaths().productionProjectsDir);
-  const resolved = path.resolve(root, id, 'production');
-  if (!resolved.startsWith(`${root}${path.sep}`)) throw new Error('Project production folder escaped managed storage.');
-  return resolved;
-}
 
 async function inspectSourceFile(sourcePath) {
   const resolved = path.resolve(requiredText(sourcePath, 'Production file source path'));
@@ -85,8 +66,13 @@ async function copyProductionFile(event, request) {
   if (!UUID_PATTERN.test(fileId)) throw new Error('The production file ID is invalid.');
 
   const inspected = await inspectSourceFile(request?.sourcePath);
-  await ensureHubStructure();
-  const productionDir = resolveProjectProductionDir(projectId);
+  const storageRoot = await ensureProductionStorage();
+  const disk = await freeSpaceFor(storageRoot);
+  if (disk.freeBytes !== null && disk.freeBytes < inspected.stats.size + COPY_SAFETY_BUFFER_BYTES) {
+    throw new Error(`Not enough free space for this managed copy. PF2 keeps at least ${Math.round(COPY_SAFETY_BUFFER_BYTES / 1024 / 1024)} MB of free headroom after a copy.`);
+  }
+
+  const productionDir = await resolveProjectProductionDir(projectId, storageRoot);
   await fsp.mkdir(productionDir, { recursive: true });
 
   const sanitizedOriginal = logic.sanitizeFileName(inspected.originalFileName);
@@ -186,7 +172,7 @@ async function cancelProductionFileCopy(_event, copyId) {
 }
 
 async function openProductionFile(_event, relativePath) {
-  const filePath = resolveProductionPath(relativePath);
+  const filePath = await resolveProductionPath(relativePath);
   await fsp.access(filePath);
   const message = await shell.openPath(filePath);
   if (message) throw new Error(message);
@@ -194,7 +180,7 @@ async function openProductionFile(_event, relativePath) {
 }
 
 async function showProductionFile(_event, relativePath) {
-  const filePath = resolveProductionPath(relativePath);
+  const filePath = await resolveProductionPath(relativePath);
   await fsp.access(filePath);
   shell.showItemInFolder(filePath);
   return { ok: true };
@@ -202,13 +188,13 @@ async function showProductionFile(_event, relativePath) {
 
 async function deleteProductionFile(_event, relativePath) {
   if (!relativePath) return { ok: true };
-  const filePath = resolveProductionPath(relativePath);
+  const filePath = await resolveProductionPath(relativePath);
   await fsp.rm(filePath, { force: true });
   return { ok: true };
 }
 
 async function removeProjectProductionFolder(projectId) {
-  const directory = resolveProjectProductionDir(projectId);
+  const directory = await resolveProjectProductionDir(projectId);
   const projectDir = path.dirname(directory);
   await fsp.rm(projectDir, { recursive: true, force: true });
   return { ok: true };
