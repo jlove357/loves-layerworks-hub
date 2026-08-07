@@ -101,6 +101,22 @@ async function copyProjectImage(_event, request) {
   });
 }
 
+async function copyExistingProjectImage(_event, request) {
+  const sourceRelativePath = normalizeManagedRelativePath(request?.sourceRelativePath);
+  if (!sourceRelativePath || !sourceRelativePath.startsWith('images/originals/')) {
+    throw new Error('Project reuse can only copy a managed original reference image.');
+  }
+  const sourcePath = resolveManagedPath(sourceRelativePath);
+  const paths = await ensureHubStructure();
+  return copyManagedImage({
+    sourcePath,
+    recordId: requiredText(request?.projectId, 'Project ID'),
+    directory: paths.originalsDir,
+    relativeDirectory: 'images/originals',
+    label: 'project'
+  });
+}
+
 async function copyFinishedImage(_event, request) {
   const paths = await ensureHubStructure();
   return copyManagedImage({
@@ -139,6 +155,7 @@ module.exports = {
   selectFinishedImage,
   copySwatchImage,
   copyProjectImage,
+  copyExistingProjectImage,
   copyFinishedImage,
   readManagedImage,
   deleteManagedImage
