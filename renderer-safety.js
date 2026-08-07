@@ -91,7 +91,7 @@ async function load() {
     renderAll();
     setInventoryDisabled(false);
     if (result.migrated) setStatus('Local data migrated to the current Hub schema', 'success');
-    else setStatus(result.created ? 'Local shop file created' : 'Local inventory, projects, palettes, gallery, exports, and backups loaded', 'success');
+    else setStatus(result.created ? 'Local shop file created' : 'Local inventory, projects, production files, palettes, gallery, exports, and backups loaded', 'success');
   } catch (error) {
     console.error(error);
     state.loadFailed = true;
@@ -144,7 +144,7 @@ $('#restoreBackup').addEventListener('click', restoreBackup);
 $('#exportFullBackup').addEventListener('click', exportFullBackup);
 
 $('#appName').textContent = window.layerWorks?.appName || "Love's LayerWorks Hub";
-$('#milestone').textContent = window.layerWorks?.milestone || 'V2';
+$('#milestone').textContent = window.layerWorks?.milestone || 'V2.1 PF1';
 activateTab('planner');
 load();
 
@@ -170,6 +170,8 @@ loadFeatureScript('td-logic.js')
   .then(() => loadFeatureScript('palette-logic.js'))
   .then(() => loadFeatureScript('renderer-palette.js'))
   .then(() => loadFeatureScript('renderer-workflow-cleanup.js'))
+  .then(() => loadFeatureScript('production-file-logic.js'))
+  .then(() => loadFeatureScript('renderer-production-files.js'))
   .catch((error) => {
     console.error(error);
     setStatus(`Feature load failed: ${error.message}`, 'error');
