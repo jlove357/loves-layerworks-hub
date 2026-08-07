@@ -44,6 +44,8 @@ function hubPaths() {
     originalsDir: path.join(root, 'images', 'originals'),
     finishedDir: path.join(root, 'images', 'finished'),
     exportsDir: path.join(root, 'exports'),
+    filesDir: path.join(root, 'files'),
+    productionProjectsDir: path.join(root, 'files', 'projects'),
     backupDir: path.join(root, 'backups', 'hub-data')
   };
 }
@@ -56,6 +58,7 @@ async function ensureHubStructure() {
     fs.mkdir(paths.originalsDir, { recursive: true }),
     fs.mkdir(paths.finishedDir, { recursive: true }),
     fs.mkdir(paths.exportsDir, { recursive: true }),
+    fs.mkdir(paths.productionProjectsDir, { recursive: true }),
     fs.mkdir(paths.backupDir, { recursive: true })
   ]);
   return paths;
