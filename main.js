@@ -21,6 +21,13 @@ const {
   deleteProductionFile,
   removeProjectProductionFolder
 } = require('./production-file-service');
+const {
+  getProductionStorageStatus,
+  checkProjectProductionFiles,
+  verifyProductionLibrary,
+  cancelProductionStorageOperation,
+  relocateProductionStorage
+} = require('./production-storage-service');
 const { saveGalleryExport, revealGalleryExport } = require('./gallery-export-service');
 const { exportInventory, importInventory } = require('./inventory-transfer');
 const { dataStatus, restoreBackup, exportFullBackup } = require('./backup-service');
@@ -87,6 +94,11 @@ app.whenReady().then(async () => {
   ipcMain.handle('hub:open-production-file', openProductionFile);
   ipcMain.handle('hub:show-production-file', showProductionFile);
   ipcMain.handle('hub:delete-production-file', deleteProductionFile);
+  ipcMain.handle('hub:production-storage-status', getProductionStorageStatus);
+  ipcMain.handle('hub:check-project-production-files', checkProjectProductionFiles);
+  ipcMain.handle('hub:verify-production-library', verifyProductionLibrary);
+  ipcMain.handle('hub:cancel-production-storage-operation', cancelProductionStorageOperation);
+  ipcMain.handle('hub:relocate-production-storage', relocateProductionStorage);
   ipcMain.handle('hub:save-gallery-export', saveGalleryExport);
   ipcMain.handle('hub:reveal-gallery-export', revealGalleryExport);
   ipcMain.handle('hub:copy-text', (_event, value) => {
