@@ -123,11 +123,7 @@
       }
     }
 
-    const selectedTotal = selected.reduce((sum, color) => sum + color.count, 0) || 1;
-    return selected.map(({ hex, count }) => ({
-      hex,
-      weight: count / selectedTotal
-    }));
+    return selected.map(({ hex, weight }) => ({ hex, weight }));
   }
 
   function activeFilaments(filaments) {
