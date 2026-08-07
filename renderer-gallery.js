@@ -1,6 +1,8 @@
 (() => {
   const logic = window.GalleryLogic;
+  const workflow = window.WorkflowLogic;
   if (!logic) throw new Error('Gallery Catalog logic failed to load.');
+  if (!workflow) throw new Error('V2 workflow logic failed to load.');
 
   let selectedProjectId = null;
   let selectedFinishedPhoto = null;
@@ -36,12 +38,12 @@
       </article>
 
       <details id="galleryPreparation" class="workspace-card gallery-preparation" open>
-        <summary><span><small>PROJECT PREPARATION</small><strong>Status and finished photo</strong></span><span>Uses the unified project record</span></summary>
+        <summary><span><small>PROJECT PREPARATION</small><strong>Status, inventory completion, and finished photo</strong></span><span>Uses the unified project record</span></summary>
         <div class="gallery-prep-body">
           <div class="gallery-prep-fields">
             <label><span>Project</span><select id="galleryProjectSelect"><option value="">Choose a project</option></select></label>
             <label><span>Project status</span><select id="galleryProjectStatus"></select></label>
-            <p class="gallery-prep-note">Catalog eligibility begins at <b>finished</b>. Status changes are saved through the same verified <code>hub-data.json</code> transaction as every other project update.</p>
+            <p class="gallery-prep-note">Catalog eligibility begins at <b>finished</b>. When a project first moves into finished, delivered, or gallery status, the Hub will show the slicer filament usage and ask before deducting it from Inventory. Project and inventory changes save together.</p>
             <div class="gallery-prep-actions">
               <button id="chooseFinishedPhoto" type="button">Choose finished photo</button>
               <button id="removeFinishedPhoto" type="button">Remove finished photo</button>
@@ -97,13 +99,6 @@
       $('#galleryPreparation').scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
     dialog.addEventListener('click', (event) => { if (event.target === dialog) closeGalleryDetail(); });
-
-    const badge = document.querySelector('.badge');
-    badge.querySelector('b').textContent = 'M4A';
-    const badgeText = [...badge.childNodes].find((node) => node.nodeType === Node.TEXT_NODE);
-    if (badgeText) badgeText.textContent = ' Gallery Catalog';
-    const footerLead = document.querySelector('footer span:first-child');
-    footerLead.replaceChildren(createTextElement('b', '', 'Milestone 4A:'), document.createTextNode(' Gallery Catalog'));
   }
 
   function projectById(projectId) {
@@ -227,8 +222,8 @@
     const specs = document.createElement('div');
     specs.className = 'gallery-card-specs';
     specs.append(
-      createTextElement('span', '', `Estimated: ${minutesLabel(project.estimatedTimeMinutes)}`),
-      createTextElement('span', '', `Actual: ${project.actualTimeMinutes === null ? 'Not entered' : minutesLabel(project.actualTimeMinutes)}`)
+      createTextElement('span', '', `Slicer time: ${minutesLabel(project.estimatedTimeMinutes)}`),
+      createTextElement('span', '', project.inventoryDeductedAt ? 'Inventory deducted' : 'Inventory not auto-deducted')
     );
 
     const actions = document.createElement('div');
@@ -304,7 +299,10 @@
     if (project) {
       $('#galleryProjectStatus').value = project.status;
       const eligibility = logic.isEligible(project) ? 'Eligible for the catalog.' : 'Not yet eligible for the catalog.';
-      $('#galleryPrepMessage').textContent = `${logic.displayName(project)} · ${eligibility}`;
+      const deduction = project.inventoryDeductedAt
+        ? ` Inventory deducted ${new Date(project.inventoryDeductedAt).toLocaleString()}.`
+        : '';
+      $('#galleryPrepMessage').textContent = `${logic.displayName(project)} · ${eligibility}${deduction}`;
     } else {
       $('#galleryPrepMessage').textContent = 'Choose a project to begin.';
     }
@@ -355,12 +353,33 @@
     renderFinishedPreview();
   }
 
+  function confirmInventoryDeduction(project, nextStatus) {
+    if (!workflow.shouldDeductInventory(project, nextStatus)) return [];
+    const plan = workflow.planInventoryDeduction(project, state.data.filaments);
+    if (!plan.length) return [];
+    const problems = workflow.deductionProblems(plan);
+    if (problems.length) {
+      const lines = problems.map((entry) => entry.missing
+        ? `${entry.filamentId}: selected roll is missing`
+        : `${entry.colorName} · ${entry.rollCode}: needs ${formatGrams(entry.grams)}, only ${formatGrams(entry.availableG)} remains`);
+      throw new Error(`Inventory cannot be deducted safely:\n${lines.join('\n')}\nAdjust the project's slicer usage or handle the correction with Manual Subtract.`);
+    }
+    const lines = workflow.deductionSummary(plan);
+    const accepted = confirm(
+      `Mark this project ${nextStatus} and subtract its slicer filament usage from Inventory?\n\n${lines.join('\n')}\n\nThis deduction is recorded and will not run a second time for this project.`
+    );
+    if (!accepted) throw new Error('Status change canceled before inventory deduction.');
+    return plan;
+  }
+
   async function saveGalleryPreparation() {
     const project = projectById(selectedProjectId);
     if (!project) return;
     let newManagedPath = null;
     const oldManagedPath = project.finishedImagePath || null;
     try {
+      const nextStatus = $('#galleryProjectStatus').value;
+      const deductionPlan = confirmInventoryDeduction(project, nextStatus);
       let finishedImagePath = removeExistingFinishedPhoto ? null : oldManagedPath;
       if (selectedFinishedPhoto) {
         setStatus('Copying finished photo into managed storage…', 'working');
@@ -374,12 +393,17 @@
       }
 
       const now = new Date().toISOString();
-      const updated = logic.applyStatusDates(project, $('#galleryProjectStatus').value, now);
+      const updated = logic.applyStatusDates(project, nextStatus, now);
       updated.finishedImagePath = finishedImagePath;
       const next = structuredClone(state.data);
       const index = next.projects.findIndex((item) => item.id === project.id);
       next.projects[index] = updated;
-      const saved = await commitData(next, 'Project gallery details updated');
+      if (deductionPlan.length) {
+        workflow.applyInventoryDeductionInPlace(next, project.id, deductionPlan, now);
+      }
+      const saved = await commitData(next, deductionPlan.length
+        ? 'Project completed and inventory deducted'
+        : 'Project gallery details updated');
       if (!saved) {
         if (newManagedPath) await window.layerWorks.deleteManagedImage(newManagedPath).catch(() => {});
         return;
@@ -389,9 +413,12 @@
       }
       selectedFinishedPhoto = null;
       removeExistingFinishedPhoto = false;
-      $('#galleryPrepMessage').textContent = logic.isEligible(updated)
-        ? 'Saved. This project is eligible for the Gallery Catalog.'
-        : 'Saved. Change the status to finished, delivered, or gallery to include it in the catalog.';
+      const savedProject = projectById(project.id);
+      $('#galleryPrepMessage').textContent = deductionPlan.length
+        ? 'Saved. Slicer filament usage was deducted from Inventory in the same verified transaction.'
+        : logic.isEligible(savedProject)
+          ? 'Saved. This project is eligible for the Gallery Catalog.'
+          : 'Saved. Change the status to finished, delivered, or gallery to include it in the catalog.';
       renderGallery();
     } catch (error) {
       if (newManagedPath) await window.layerWorks.deleteManagedImage(newManagedPath).catch(() => {});
@@ -442,8 +469,8 @@
       detailLine('Project type', project.isCustom ? 'Custom' : 'Stock / personal'),
       detailLine('Customer', project.customerName || 'Not entered'),
       detailLine('Size', `${project.widthMm ?? '—'} × ${project.heightMm ?? '—'} mm`),
-      detailLine('Estimated print time', minutesLabel(project.estimatedTimeMinutes)),
-      detailLine('Actual print time', project.actualTimeMinutes === null ? 'Not entered' : minutesLabel(project.actualTimeMinutes)),
+      detailLine('Slicer print time', minutesLabel(project.estimatedTimeMinutes)),
+      detailLine('Inventory deduction', project.inventoryDeductedAt ? new Date(project.inventoryDeductedAt).toLocaleString() : 'Not auto-deducted'),
       detailLine('Floor Price', formatCurrency(project.floorPrice)),
       detailLine('List Price', project.sellPrice === null ? 'Not entered' : formatCurrency(project.sellPrice)),
       detailLine('Created', new Date(project.dateCreated).toLocaleString()),
@@ -453,7 +480,7 @@
 
     const filamentSection = document.createElement('section');
     filamentSection.className = 'gallery-detail-filaments';
-    filamentSection.append(createTextElement('h3', '', 'Selected filament rolls'));
+    filamentSection.append(createTextElement('h3', '', 'Slicer filament usage'));
     const table = document.createElement('div');
     table.className = 'gallery-filament-table';
     for (const usage of project.filamentUsage || []) {
@@ -468,10 +495,7 @@
         createTextElement('small', '', roll ? `${roll.brand} · ${roll.material}` : usage.filamentId)
       );
       const amounts = document.createElement('div');
-      amounts.append(
-        createTextElement('span', '', `Estimated ${formatGrams(usage.gramsEstimated)}`),
-        createTextElement('span', '', `Actual ${usage.gramsActual === null ? 'not entered' : formatGrams(usage.gramsActual)}`)
-      );
+      amounts.append(createTextElement('span', '', `Slicer usage ${formatGrams(usage.gramsEstimated)}`));
       row.append(swatch, identity, amounts);
       table.append(row);
     }
