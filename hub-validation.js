@@ -18,6 +18,16 @@ const SUPPORTED_SCHEMA_VERSIONS = new Set([1, SCHEMA_VERSION]);
 const PROJECT_STATUSES = new Set([
   'draft', 'quoted', 'approved', 'printing', 'finished', 'delivered', 'gallery', 'cancelled'
 ]);
+const PRODUCTION_FILE_ROLES = new Set([
+  'final_print',
+  'bambu_project',
+  'stl_model',
+  'hueforge_project',
+  'chroma_canvas_project',
+  'source_artwork',
+  'other'
+]);
+const SHA256_PATTERN = /^[0-9a-f]{64}$/i;
 
 function migratedMargin(settings, sourceVersion) {
   const raw = settings?.targetMarginPercent;
@@ -97,6 +107,22 @@ function normalizeManagedRelativePath(value) {
     throw new Error('Managed image paths must stay inside the Hub folder.');
   }
   if (!text.startsWith('images/')) throw new Error('Managed image paths must begin with images/.');
+  return text;
+}
+
+function normalizeProductionRelativePath(value, projectId = null) {
+  const text = asText(value).replaceAll('\\', '/');
+  if (!text) return null;
+  if (path.isAbsolute(text) || text.startsWith('../') || text.includes('/../')) {
+    throw new Error('Production file paths must stay inside the Hub folder.');
+  }
+  const parts = text.split('/');
+  if (parts.length !== 5 || parts[0] !== 'files' || parts[1] !== 'projects' || parts[3] !== 'production' || !parts[4]) {
+    throw new Error('Production file paths must use files/projects/<project-id>/production/<file>.');
+  }
+  if (!UUID_PATTERN.test(parts[2])) throw new Error('Production file paths contain an invalid project ID.');
+  if (projectId && parts[2] !== projectId) throw new Error('Production file path does not belong to its project.');
+  if (/[\\/]/.test(parts[4])) throw new Error('Production stored filenames cannot contain folder separators.');
   return text;
 }
 
@@ -187,6 +213,49 @@ function normalizeDeductionUsage(item, index, filamentIds, projectPrefix) {
   };
 }
 
+function normalizeProductionFile(item, index, projectId, projectPrefix) {
+  const prefix = `${projectPrefix} production file ${index + 1}`;
+  const now = new Date().toISOString();
+  const id = requiredText(item?.id, `${prefix} ID`);
+  if (!UUID_PATTERN.test(id)) throw new Error(`${prefix} has an invalid system ID.`);
+
+  const originalFileName = requiredText(item?.originalFileName, `${prefix} original filename`);
+  if (/[\\/]/.test(originalFileName)) throw new Error(`${prefix} original filename cannot contain folder separators.`);
+  const storedFileName = requiredText(item?.storedFileName, `${prefix} stored filename`);
+  if (/[\\/]/.test(storedFileName)) throw new Error(`${prefix} stored filename cannot contain folder separators.`);
+  if (!storedFileName.startsWith(`${id}_`)) throw new Error(`${prefix} stored filename must begin with its file ID.`);
+
+  const relativePath = normalizeProductionRelativePath(item?.relativePath, projectId);
+  if (!relativePath || relativePath.split('/').at(-1) !== storedFileName) {
+    throw new Error(`${prefix} stored filename does not match its managed path.`);
+  }
+
+  const role = asText(item?.role) || 'other';
+  if (!PRODUCTION_FILE_ROLES.has(role)) throw new Error(`${prefix} has an unsupported role: ${role}.`);
+  const sha256 = requiredText(item?.sha256, `${prefix} SHA256`).toLowerCase();
+  if (!SHA256_PATTERN.test(sha256)) throw new Error(`${prefix} SHA256 must contain 64 hexadecimal characters.`);
+
+  const extension = asText(item?.extension).toLowerCase();
+  if (extension && (!extension.startsWith('.') || /[\\/]/.test(extension) || extension.length > 24)) {
+    throw new Error(`${prefix} extension is invalid.`);
+  }
+
+  return {
+    id,
+    label: asText(item?.label) || originalFileName,
+    role,
+    originalFileName,
+    storedFileName,
+    relativePath,
+    extension,
+    sizeBytes: finiteNumber(item?.sizeBytes, `${prefix} size`, { minimum: 1 }),
+    sha256,
+    isPrimary: Boolean(item?.isPrimary),
+    notes: String(item?.notes ?? '').trim(),
+    addedAt: timestamp(item?.addedAt, now)
+  };
+}
+
 function normalizeProject(item, index, filamentIds) {
   const prefix = `Project ${index + 1}`;
   const now = new Date().toISOString();
@@ -222,6 +291,22 @@ function normalizeProject(item, index, filamentIds) {
     normalizeDeductionUsage(entry, deductionIndex, filamentIds, prefix)
   ));
 
+  const productionSource = Array.isArray(item?.productionFiles) ? item.productionFiles : [];
+  const productionFiles = productionSource.map((entry, productionIndex) => (
+    normalizeProductionFile(entry, productionIndex, id, prefix)
+  ));
+  const productionFileIds = new Set();
+  const productionPaths = new Set();
+  let primaryCount = 0;
+  for (const productionFile of productionFiles) {
+    if (productionFileIds.has(productionFile.id)) throw new Error(`${prefix} contains a duplicate production file ID.`);
+    if (productionPaths.has(productionFile.relativePath)) throw new Error(`${prefix} contains a duplicate production file path.`);
+    productionFileIds.add(productionFile.id);
+    productionPaths.add(productionFile.relativePath);
+    if (productionFile.isPrimary) primaryCount += 1;
+  }
+  if (primaryCount > 1) throw new Error(`${prefix} can only have one primary production file.`);
+
   return {
     id,
     customerName: asText(item?.customerName),
@@ -233,6 +318,7 @@ function normalizeProject(item, index, filamentIds) {
     heightMm: nullableNumber(item?.heightMm, `${prefix} height`, { minimum: 0.01 }),
     filamentUsage,
     paletteSelections,
+    productionFiles,
     estimatedTimeMinutes: finiteNumber(item?.estimatedTimeMinutes ?? 0, `${prefix} slicer time`, { minimum: 0 }),
     actualTimeMinutes: nullableNumber(item?.actualTimeMinutes, `${prefix} legacy actual time`, { minimum: 0 }),
     estimatedFilamentCost: finiteNumber(item?.estimatedFilamentCost ?? 0, `${prefix} slicer filament cost`, { minimum: 0 }),
@@ -295,7 +381,9 @@ function normalizeHubData(input) {
 
 module.exports = {
   PROJECT_STATUSES,
+  PRODUCTION_FILE_ROLES,
   normalizeSettings,
   normalizeManagedRelativePath,
+  normalizeProductionRelativePath,
   normalizeHubData
 };
