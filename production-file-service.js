@@ -85,7 +85,7 @@ async function copyProductionFile(event, request) {
   if (!UUID_PATTERN.test(fileId)) throw new Error('The production file ID is invalid.');
 
   const inspected = await inspectSourceFile(request?.sourcePath);
-  const paths = await ensureHubStructure();
+  await ensureHubStructure();
   const productionDir = resolveProjectProductionDir(projectId);
   await fsp.mkdir(productionDir, { recursive: true });
 
@@ -214,10 +214,6 @@ async function removeProjectProductionFolder(projectId) {
   return { ok: true };
 }
 
-async function deleteProjectProductionFolder(_event, projectId) {
-  return removeProjectProductionFolder(projectId);
-}
-
 module.exports = {
   selectProductionFile,
   copyProductionFile,
@@ -225,6 +221,5 @@ module.exports = {
   openProductionFile,
   showProductionFile,
   deleteProductionFile,
-  deleteProjectProductionFolder,
   removeProjectProductionFolder
 };
