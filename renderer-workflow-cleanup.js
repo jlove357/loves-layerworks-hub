@@ -8,13 +8,13 @@
 
     const badge = document.querySelector('.badge');
     if (badge) {
-      badge.querySelector('b').textContent = 'V2';
+      badge.querySelector('b').textContent = 'V2.1';
       const badgeText = [...badge.childNodes].find((node) => node.nodeType === Node.TEXT_NODE);
-      if (badgeText) badgeText.textContent = ' Workflow Cleanup';
+      if (badgeText) badgeText.textContent = ' PF1 Production Files';
     }
     const footerLead = document.querySelector('footer span:first-child');
     if (footerLead) {
-      footerLead.replaceChildren(createTextElement('b', '', 'V2:'), document.createTextNode(' Workflow Cleanup'));
+      footerLead.replaceChildren(createTextElement('b', '', 'V2.1 PF1:'), document.createTextNode(' Production Files Core'));
     }
   }
 
