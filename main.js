@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, clipboard } = require('electron');
 const path = require('node:path');
 const { hubPaths, ensureHubStructure } = require('./hub-config');
 const { listValidBackups, persistHubData, loadHubData } = require('./hub-persistence');
@@ -12,6 +12,7 @@ const {
   readManagedImage,
   deleteManagedImage
 } = require('./image-service');
+const { saveGalleryExport, revealGalleryExport } = require('./gallery-export-service');
 const { exportInventory, importInventory } = require('./inventory-transfer');
 const { dataStatus, restoreBackup, exportFullBackup } = require('./backup-service');
 
@@ -53,6 +54,15 @@ app.whenReady().then(async () => {
   ipcMain.handle('hub:copy-finished-image', copyFinishedImage);
   ipcMain.handle('hub:read-managed-image', readManagedImage);
   ipcMain.handle('hub:delete-managed-image', deleteManagedImage);
+  ipcMain.handle('hub:save-gallery-export', saveGalleryExport);
+  ipcMain.handle('hub:reveal-gallery-export', revealGalleryExport);
+  ipcMain.handle('hub:copy-text', (_event, value) => {
+    const text = String(value ?? '');
+    if (!text.trim()) throw new Error('Clipboard text cannot be blank.');
+    if (text.length > 20_000) throw new Error('Clipboard text is too long.');
+    clipboard.writeText(text);
+    return { ok: true };
+  });
   ipcMain.handle('hub:export-inventory', exportInventory);
   ipcMain.handle('hub:import-inventory', importInventory);
   ipcMain.handle('hub:list-backups', listValidBackups);
