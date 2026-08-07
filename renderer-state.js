@@ -52,10 +52,13 @@ function remainingRollValue(roll) {
 }
 
 function rollIsReferenced(rollId) {
-  return state.data?.projects?.some((project) => (
-    Array.isArray(project?.filamentUsage)
-    && project.filamentUsage.some((usage) => usage?.filamentId === rollId)
-  )) || false;
+  return state.data?.projects?.some((project) => {
+    const usedForQuote = Array.isArray(project?.filamentUsage)
+      && project.filamentUsage.some((usage) => usage?.filamentId === rollId);
+    const usedForPalette = Array.isArray(project?.paletteSelections)
+      && project.paletteSelections.some((selection) => selection?.filamentId === rollId);
+    return usedForQuote || usedForPalette;
+  }) || false;
 }
 
 function filteredRolls() {
