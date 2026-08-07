@@ -2,7 +2,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('layerWorks', {
   appName: "Love's LayerWorks Hub",
-  milestone: 'V2.1 PF2',
+  milestone: 'V2.1 PF3',
   loadData: () => ipcRenderer.invoke('hub:load-data'),
   saveData: (data) => ipcRenderer.invoke('hub:save-data', data),
   dataStatus: () => ipcRenderer.invoke('hub:data-status'),
@@ -11,11 +11,13 @@ contextBridge.exposeInMainWorld('layerWorks', {
   selectFinishedImage: () => ipcRenderer.invoke('hub:select-finished-image'),
   copySwatchImage: (request) => ipcRenderer.invoke('hub:copy-swatch-image', request),
   copyProjectImage: (request) => ipcRenderer.invoke('hub:copy-project-image', request),
+  copyExistingProjectImage: (request) => ipcRenderer.invoke('hub:copy-existing-project-image', request),
   copyFinishedImage: (request) => ipcRenderer.invoke('hub:copy-finished-image', request),
   readManagedImage: (relativePath) => ipcRenderer.invoke('hub:read-managed-image', relativePath),
   deleteManagedImage: (relativePath) => ipcRenderer.invoke('hub:delete-managed-image', relativePath),
   selectProductionFile: () => ipcRenderer.invoke('hub:select-production-file'),
   copyProductionFile: (request) => ipcRenderer.invoke('hub:copy-production-file', request),
+  copyExistingProductionFile: (request) => ipcRenderer.invoke('hub:copy-existing-production-file', request),
   cancelProductionFileCopy: (copyId) => ipcRenderer.invoke('hub:cancel-production-file-copy', copyId),
   openProductionFile: (relativePath) => ipcRenderer.invoke('hub:open-production-file', relativePath),
   showProductionFile: (relativePath) => ipcRenderer.invoke('hub:show-production-file', relativePath),
