@@ -162,6 +162,19 @@ function normalizeUsage(item, index, filamentIds, projectPrefix) {
   };
 }
 
+function normalizePaletteSelection(item, index, filamentIds, projectPrefix) {
+  const prefix = `${projectPrefix} palette color ${index + 1}`;
+  const filamentId = requiredText(item?.filamentId, `${prefix} filament ID`);
+  if (!filamentIds.has(filamentId)) {
+    throw new Error(`${prefix} references a roll that does not exist.`);
+  }
+  const sourceColorHex = requiredText(item?.sourceColorHex, `${prefix} source color`).toLowerCase();
+  if (!HEX_PATTERN.test(sourceColorHex)) {
+    throw new Error(`${prefix} source color must be a six-digit hex color.`);
+  }
+  return { filamentId, sourceColorHex };
+}
+
 function normalizeProject(item, index, filamentIds) {
   const prefix = `Project ${index + 1}`;
   const now = new Date().toISOString();
@@ -179,6 +192,19 @@ function normalizeProject(item, index, filamentIds) {
     seenFilaments.add(usage.filamentId);
   }
 
+  const paletteSource = Array.isArray(item?.paletteSelections) ? item.paletteSelections : [];
+  if (paletteSource.length > 12) throw new Error(`${prefix} cannot save more than 12 palette colors.`);
+  const paletteSelections = paletteSource.map((selection, paletteIndex) => (
+    normalizePaletteSelection(selection, paletteIndex, filamentIds, prefix)
+  ));
+  const seenPaletteFilaments = new Set();
+  for (const selection of paletteSelections) {
+    if (seenPaletteFilaments.has(selection.filamentId)) {
+      throw new Error(`${prefix} uses the same physical roll more than once in its saved palette.`);
+    }
+    seenPaletteFilaments.add(selection.filamentId);
+  }
+
   return {
     id,
     customerName: asText(item?.customerName),
@@ -189,6 +215,7 @@ function normalizeProject(item, index, filamentIds) {
     widthMm: nullableNumber(item?.widthMm, `${prefix} width`, { minimum: 0.01 }),
     heightMm: nullableNumber(item?.heightMm, `${prefix} height`, { minimum: 0.01 }),
     filamentUsage,
+    paletteSelections,
     estimatedTimeMinutes: finiteNumber(item?.estimatedTimeMinutes ?? 0, `${prefix} estimated time`, { minimum: 0 }),
     actualTimeMinutes: nullableNumber(item?.actualTimeMinutes, `${prefix} actual time`, { minimum: 0 }),
     estimatedFilamentCost: finiteNumber(item?.estimatedFilamentCost ?? 0, `${prefix} estimated filament cost`, { minimum: 0 }),
