@@ -1,6 +1,6 @@
 {
   "name": "loves-layerworks-hub",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "private": true,
   "description": "Local Windows desktop operating hub for Love's LayerWorks",
   "main": "main.js",

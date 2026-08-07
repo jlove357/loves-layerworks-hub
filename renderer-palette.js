@@ -3,6 +3,7 @@
   if (!logic) throw new Error('Palette Assistant logic failed to load.');
 
   let selectedPaletteProjectId = null;
+  let selectedMaterial = '';
   let paletteDraft = [];
   let extractedColors = [];
   let paletteDirty = false;
@@ -24,6 +25,7 @@
         <section class="palette-source-panel">
           <div class="palette-heading"><div><small>PROJECT REFERENCE</small><h3>Choose an image to analyze</h3></div><span id="paletteProjectStatus" class="palette-status-chip">No project selected</span></div>
           <label><span>Project with a reference image</span><select id="paletteProjectSelect"><option value="">Choose a project</option></select></label>
+          <label class="palette-material-field"><span>Material to match</span><select id="paletteMaterialSelect"><option value="">Choose a material</option></select><small>Only active rolls of this material are considered. Identical physical rolls are grouped as one color candidate.</small></label>
           <div id="paletteReferencePreview" class="palette-reference-preview"><span>Choose a project with a managed reference image.</span></div>
           <div class="palette-source-actions">
             <button id="extractPaletteColors" class="primary" type="button">Extract reference colors</button>
@@ -38,7 +40,7 @@
 
         <section class="palette-results-panel">
           <div class="palette-heading"><div><small>CLOSEST INVENTORY COLORS</small><h3>Closest inventory colors</h3></div><span id="paletteResultCount" class="palette-count">0 colors</span></div>
-          <p class="palette-results-intro">Suggestions use active physical rolls only. Replace a roll from the dropdown, change the order, or remove colors before saving.</p>
+          <p id="paletteResultsIntro" class="palette-results-intro">Suggestions use active physical rolls only. Identical rolls are grouped as one color candidate.</p>
           <div id="paletteExtractedColors" class="palette-extracted-colors"></div>
           <div id="paletteRows" class="palette-rows"></div>
           <div class="palette-save-row">
@@ -50,6 +52,7 @@
     panel.append(studio);
 
     $('#paletteProjectSelect').addEventListener('change', () => selectPaletteProject($('#paletteProjectSelect').value));
+    $('#paletteMaterialSelect').addEventListener('change', handleMaterialChange);
     $('#extractPaletteColors').addEventListener('click', extractPaletteColors);
     $('#reloadSavedPalette').addEventListener('click', reloadSavedPalette);
     $('#paletteRows').addEventListener('change', handlePaletteChange);
@@ -93,6 +96,45 @@
     return logic.activeFilaments(state.data?.filaments || []);
   }
 
+  function materials() {
+    return logic.materialOptions(state.data?.filaments || []);
+  }
+
+  function activeTypes() {
+    return logic.activeFilamentTypes(state.data?.filaments || [], selectedMaterial);
+  }
+
+  function actualMaterialLabel(value) {
+    const wanted = String(value || '').trim().toLocaleLowerCase();
+    return materials().find((material) => material.toLocaleLowerCase() === wanted) || '';
+  }
+
+  function savedPaletteMaterial(project) {
+    const rollMap = new Map((state.data?.filaments || []).map((roll) => [roll.id, roll]));
+    const labels = new Map();
+    for (const selection of Array.isArray(project?.paletteSelections) ? project.paletteSelections : []) {
+      const material = String(rollMap.get(selection?.filamentId)?.material || '').trim();
+      const key = material.toLocaleLowerCase();
+      if (key && !labels.has(key)) labels.set(key, material);
+    }
+    return labels.size === 1 ? [...labels.values()][0] : '';
+  }
+
+  function preferredMaterial(project) {
+    const options = materials();
+    if (!options.length) return '';
+    const candidates = [
+      savedPaletteMaterial(project),
+      logic.inferProjectMaterial(project, state.data?.filaments || []),
+      selectedMaterial
+    ];
+    for (const candidate of candidates) {
+      const actual = actualMaterialLabel(candidate);
+      if (actual) return actual;
+    }
+    return options[0];
+  }
+
   function renderProjectSelector() {
     const select = $('#paletteProjectSelect');
     if (!select) return;
@@ -105,12 +147,31 @@
       select.value = selectedPaletteProjectId;
     } else if (selectedPaletteProjectId) {
       selectedPaletteProjectId = null;
+      selectedMaterial = '';
       paletteDraft = [];
       extractedColors = [];
       paletteDirty = false;
       referenceDataUrl = '';
       referencePath = '';
     }
+  }
+
+  function renderMaterialSelector() {
+    const select = $('#paletteMaterialSelect');
+    if (!select) return;
+    const project = selectedProject();
+    const options = materials();
+    select.replaceChildren();
+    if (!options.length) {
+      select.append(new Option('No active materials available', ''));
+      selectedMaterial = '';
+      select.disabled = true;
+      return;
+    }
+    if (!actualMaterialLabel(selectedMaterial)) selectedMaterial = preferredMaterial(project);
+    for (const material of options) select.append(new Option(material, material));
+    select.value = selectedMaterial;
+    select.disabled = !project;
   }
 
   function renderReferencePreview() {
@@ -157,6 +218,13 @@
     return state.data?.filaments?.find((roll) => roll.id === rollId) || null;
   }
 
+  function typeForRollId(rollId) {
+    const roll = rollById(rollId);
+    if (!roll) return null;
+    const key = logic.filamentTypeKey(roll);
+    return activeTypes().find((type) => type.key === key) || null;
+  }
+
   function tdLabel(roll) {
     const td = logic.effectiveTd(roll);
     return td.value === null ? td.source : `${td.source}: ${td.value}`;
@@ -184,6 +252,10 @@
     return `${roll.colorName} · ${roll.brand} ${roll.material} · ${roll.rollCode}`;
   }
 
+  function typeOptionLabel(type) {
+    return `${type.colorName} · ${type.brand} ${type.material} · ${type.stockCount} ${type.stockCount === 1 ? 'roll' : 'rolls'}`;
+  }
+
   function createPaletteRow(selection, index) {
     const row = document.createElement('article');
     row.className = 'palette-row';
@@ -204,29 +276,36 @@
     const select = document.createElement('select');
     select.dataset.action = 'replace-palette-roll';
     select.dataset.index = String(index);
-    const active = activeRolls();
-    const current = rollById(selection.filamentId);
-    if (current && current.archived) {
-      const archived = new Option(`${rollOptionLabel(current)} · archived`, current.id, true, true);
-      archived.disabled = true;
-      select.append(archived);
+    const types = activeTypes();
+    const currentRoll = rollById(selection.filamentId);
+    const currentType = typeForRollId(selection.filamentId);
+    if (currentRoll && !currentType) {
+      const unavailable = new Option(`${rollOptionLabel(currentRoll)} · unavailable for ${selectedMaterial}`, currentRoll.id, true, true);
+      unavailable.disabled = true;
+      select.append(unavailable);
     }
-    for (const roll of active) select.append(new Option(rollOptionLabel(roll), roll.id));
-    if (active.some((roll) => roll.id === selection.filamentId)) select.value = selection.filamentId;
-    else if (!current) select.prepend(new Option('Missing inventory roll', '', true, true));
+    for (const type of types) select.append(new Option(typeOptionLabel(type), type.representativeId));
+    if (currentType) select.value = currentType.representativeId;
+    else if (!currentRoll) select.prepend(new Option('Missing inventory roll', '', true, true));
 
     const metadata = document.createElement('div');
     metadata.className = 'palette-roll-meta';
-    if (current) {
+    if (currentType) {
       const swatch = document.createElement('span');
       swatch.className = 'palette-roll-swatch';
-      swatch.style.background = current.colorHex;
+      swatch.style.background = currentType.colorHex;
       const details = document.createElement('div');
       details.append(
-        createTextElement('strong', '', current.colorName),
-        createTextElement('small', '', `${formatGrams(current.currentFilamentWeightG)} remaining · ${tdLabel(current)}`)
+        createTextElement('strong', '', `${currentType.colorName} · ${currentType.brand} ${currentType.material}`),
+        createTextElement(
+          'small',
+          '',
+          `${currentType.stockCount} ${currentType.stockCount === 1 ? 'roll' : 'rolls'} · ${formatGrams(currentType.totalWeightG)} total · ${tdLabel(currentType.representativeRoll)}`
+        )
       );
       metadata.append(swatch, details);
+    } else if (currentRoll) {
+      metadata.append(createTextElement('span', 'palette-missing-roll', `Saved roll is not active ${selectedMaterial} inventory.`));
     } else {
       metadata.append(createTextElement('span', 'palette-missing-roll', 'Inventory roll unavailable'));
     }
@@ -261,12 +340,19 @@
   function renderPaletteAssistant() {
     if (!state.data || !$('#paletteAssistant')) return;
     renderProjectSelector();
+    renderMaterialSelector();
     const project = selectedProject();
-    const rolls = activeRolls();
-    $('#paletteProjectStatus').textContent = project ? `${project.status} · ${rolls.length} active rolls` : 'No project selected';
-    $('#extractPaletteColors').disabled = !project || !rolls.length;
+    const types = activeTypes();
+    const rollCount = types.reduce((sum, type) => sum + type.stockCount, 0);
+    $('#paletteProjectStatus').textContent = project
+      ? `${project.status} · ${selectedMaterial || 'no material'} · ${types.length} color types / ${rollCount} rolls`
+      : 'No project selected';
+    $('#paletteResultsIntro').textContent = selectedMaterial
+      ? `Suggestions use active ${selectedMaterial} inventory only. Identical brand, material, color name, and hex entries are grouped as one color candidate.`
+      : 'Choose a material before extracting colors.';
+    $('#extractPaletteColors').disabled = !project || !selectedMaterial || !types.length;
     $('#reloadSavedPalette').disabled = !project;
-    $('#saveProjectPalette').disabled = !project;
+    $('#saveProjectPalette').disabled = !project || !selectedMaterial;
     $('#paletteResultCount').textContent = `${paletteDraft.length} ${paletteDraft.length === 1 ? 'color' : 'colors'}`;
     $('#paletteDirtyLabel').textContent = !project
       ? 'Choose a project to begin.'
@@ -289,19 +375,38 @@
   function selectPaletteProject(projectId) {
     selectedPaletteProjectId = projectId || null;
     const project = selectedProject();
+    selectedMaterial = preferredMaterial(project);
     loadSavedPalette(project);
     referenceDataUrl = '';
     referencePath = project?.originalImagePath || '';
     $('#paletteMessage').textContent = project
-      ? 'Ready to analyze the managed reference image or edit the saved palette.'
+      ? `Ready to analyze the managed reference image using ${selectedMaterial || 'active inventory'}.`
       : 'The analysis runs locally from the project’s managed reference image.';
     renderPaletteAssistant();
     if (project) loadReferenceImage(project);
   }
 
+  function handleMaterialChange() {
+    selectedMaterial = $('#paletteMaterialSelect').value;
+    const types = activeTypes();
+    if (extractedColors.length && types.length) {
+      paletteDraft = logic.matchColorsToInventory(extractedColors, state.data?.filaments || [], selectedMaterial);
+      paletteDirty = true;
+      $('#paletteMessage').textContent = `Rematched the current reference colors to unique active ${selectedMaterial} inventory colors.`;
+    } else if (!types.length) {
+      paletteDraft = [];
+      paletteDirty = true;
+      $('#paletteMessage').textContent = `No active ${selectedMaterial} inventory colors are available.`;
+    } else {
+      $('#paletteMessage').textContent = `Material set to ${selectedMaterial}. Extract reference colors to generate matches.`;
+    }
+    renderPaletteAssistant();
+  }
+
   function reloadSavedPalette() {
     const project = selectedProject();
     if (!project) return;
+    selectedMaterial = preferredMaterial(project);
     loadSavedPalette(project);
     $('#paletteMessage').textContent = paletteDraft.length ? 'Saved project palette reloaded.' : 'This project has no saved palette yet.';
     renderPaletteAssistant();
@@ -333,15 +438,15 @@
 
   async function extractPaletteColors() {
     const project = selectedProject();
-    const inventory = activeRolls();
+    const inventoryTypes = activeTypes();
     if (!project) return;
-    if (!inventory.length) {
-      setStatus('No active inventory rolls are available for matching', 'error');
+    if (!selectedMaterial || !inventoryTypes.length) {
+      setStatus('Choose a material with active inventory before matching colors', 'error');
       return;
     }
     try {
       setStatus('Extracting reference colors locally…', 'working');
-      $('#paletteMessage').textContent = 'Analyzing the managed reference image on this computer…';
+      $('#paletteMessage').textContent = `Analyzing the managed reference image and matching only against ${selectedMaterial}…`;
       if (!referenceDataUrl || referencePath !== project.originalImagePath) {
         const result = await window.layerWorks.readManagedImage(project.originalImagePath);
         if (!result?.ok || !result.dataUrl) throw new Error(result?.error || 'Managed reference image is unavailable.');
@@ -349,11 +454,11 @@
         referencePath = project.originalImagePath;
       }
       const pixels = await sampledPixels(referenceDataUrl);
-      extractedColors = logic.extractDominantColors(pixels, Math.min(5, inventory.length));
-      paletteDraft = logic.matchColorsToInventory(extractedColors, inventory);
+      extractedColors = logic.extractDominantColors(pixels, Math.min(5, inventoryTypes.length));
+      paletteDraft = logic.matchColorsToInventory(extractedColors, state.data?.filaments || [], selectedMaterial);
       if (!paletteDraft.length) throw new Error('No usable colors could be extracted from this image.');
       paletteDirty = true;
-      $('#paletteMessage').textContent = `Extracted ${extractedColors.length} reference colors and matched them to active inventory.`;
+      $('#paletteMessage').textContent = `Extracted ${extractedColors.length} reference colors and matched them to ${inventoryTypes.length} unique active ${selectedMaterial} inventory colors.`;
       renderPaletteAssistant();
       setStatus('Closest inventory colors generated', 'success');
     } catch (error) {
@@ -386,9 +491,13 @@
   async function saveProjectPalette() {
     const project = selectedProject();
     if (!project) return;
-    const normalized = logic.normalizeSelections(paletteDraft, state.data.filaments);
+    const canonical = paletteDraft.map((selection) => {
+      const type = typeForRollId(selection.filamentId);
+      return type ? { ...selection, filamentId: type.representativeId } : selection;
+    });
+    const normalized = logic.normalizeSelections(canonical, state.data.filaments, selectedMaterial);
     if (normalized.length !== paletteDraft.length) {
-      setStatus('Replace unavailable palette rolls before saving', 'error');
+      setStatus(`Replace unavailable or non-${selectedMaterial} palette colors before saving`, 'error');
       return;
     }
     const next = structuredClone(state.data);
@@ -401,7 +510,7 @@
       extractedColors = normalized.map((selection) => ({ hex: selection.sourceColorHex, weight: null }));
       paletteDirty = false;
       $('#paletteMessage').textContent = normalized.length
-        ? 'Chosen palette saved to the unified project record.'
+        ? `Chosen ${selectedMaterial} palette saved to the unified project record.`
         : 'Saved palette cleared from the project.';
       renderPaletteAssistant();
     }

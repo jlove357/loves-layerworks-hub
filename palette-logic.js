@@ -7,6 +7,10 @@
     return String(value ?? '').trim();
   }
 
+  function normalized(value) {
+    return text(value).toLocaleLowerCase();
+  }
+
   function clamp(value, minimum, maximum) {
     return Math.min(maximum, Math.max(minimum, value));
   }
@@ -135,6 +139,82 @@
       });
   }
 
+  function filamentTypeKey(roll) {
+    if (!roll || !hexToRgb(roll.colorHex)) return '';
+    return [roll.brand, roll.material, roll.colorName, String(roll.colorHex).toLowerCase()]
+      .map(normalized)
+      .join('|');
+  }
+
+  function materialOptions(filaments) {
+    const labels = new Map();
+    for (const roll of activeFilaments(filaments)) {
+      const material = text(roll.material);
+      const key = normalized(material);
+      if (key && !labels.has(key)) labels.set(key, material);
+    }
+    return [...labels.values()].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+  }
+
+  function activeFilamentTypes(filaments, material = '') {
+    const wantedMaterial = normalized(material);
+    const groups = new Map();
+
+    for (const roll of activeFilaments(filaments)) {
+      if (wantedMaterial && normalized(roll.material) !== wantedMaterial) continue;
+      const key = filamentTypeKey(roll);
+      if (!key) continue;
+      if (!groups.has(key)) {
+        groups.set(key, {
+          key,
+          brand: text(roll.brand),
+          material: text(roll.material),
+          colorName: text(roll.colorName),
+          colorHex: String(roll.colorHex).toLowerCase(),
+          rolls: []
+        });
+      }
+      groups.get(key).rolls.push(roll);
+    }
+
+    return [...groups.values()]
+      .map((group) => {
+        const rolls = [...group.rolls].sort((a, b) => {
+          const weightDifference = Number(b.currentFilamentWeightG || 0) - Number(a.currentFilamentWeightG || 0);
+          if (weightDifference) return weightDifference;
+          return text(a.rollCode).localeCompare(text(b.rollCode), undefined, { sensitivity: 'base' });
+        });
+        const representativeRoll = rolls[0];
+        return {
+          ...group,
+          rolls,
+          representativeRoll,
+          representativeId: representativeRoll?.id || '',
+          stockCount: rolls.length,
+          totalWeightG: rolls.reduce((sum, roll) => sum + (Number(roll.currentFilamentWeightG) || 0), 0)
+        };
+      })
+      .sort((a, b) => {
+        const colorCompare = a.colorName.localeCompare(b.colorName, undefined, { sensitivity: 'base' });
+        if (colorCompare) return colorCompare;
+        const brandCompare = a.brand.localeCompare(b.brand, undefined, { sensitivity: 'base' });
+        if (brandCompare) return brandCompare;
+        return a.colorHex.localeCompare(b.colorHex);
+      });
+  }
+
+  function inferProjectMaterial(project, filaments) {
+    const rollMap = new Map((Array.isArray(filaments) ? filaments : []).map((roll) => [roll?.id, roll]));
+    const labels = new Map();
+    for (const usage of Array.isArray(project?.filamentUsage) ? project.filamentUsage : []) {
+      const roll = rollMap.get(usage?.filamentId);
+      const material = text(roll?.material);
+      const key = normalized(material);
+      if (key && !labels.has(key)) labels.set(key, material);
+    }
+    return labels.size === 1 ? [...labels.values()][0] : '';
+  }
+
   function effectiveTd(roll) {
     const measured = Number(roll?.tdMeasured);
     if (roll?.tdMeasured !== null && roll?.tdMeasured !== undefined && Number.isFinite(measured)) {
@@ -147,46 +227,55 @@
     return { value: null, source: 'TD not entered' };
   }
 
-  function matchColorsToInventory(colors, filaments) {
-    const inventory = activeFilaments(filaments);
-    const available = new Set(inventory.map((roll) => roll.id));
+  function matchColorsToInventory(colors, filaments, material = '') {
+    const inventory = activeFilamentTypes(filaments, material);
+    const available = new Set(inventory.map((type) => type.key));
     const matches = [];
 
     for (const color of Array.isArray(colors) ? colors : []) {
       const sourceColorHex = text(color?.hex || color?.sourceColorHex).toLowerCase();
       if (!hexToRgb(sourceColorHex) || !available.size) continue;
       const candidates = inventory
-        .filter((roll) => available.has(roll.id))
-        .map((roll) => ({
-          roll,
-          distance: deltaE(sourceColorHex, roll.colorHex)
+        .filter((type) => available.has(type.key))
+        .map((type) => ({
+          type,
+          distance: deltaE(sourceColorHex, type.colorHex)
         }))
         .sort((a, b) => a.distance - b.distance);
       const winner = candidates[0];
       if (!winner) continue;
-      available.delete(winner.roll.id);
+      available.delete(winner.type.key);
       matches.push({
         sourceColorHex,
         sourceWeight: Number(color?.weight) || null,
-        filamentId: winner.roll.id,
+        filamentId: winner.type.representativeId,
+        filamentTypeKey: winner.type.key,
+        stockCount: winner.type.stockCount,
+        totalWeightG: winner.type.totalWeightG,
         distance: winner.distance
       });
     }
     return matches;
   }
 
-  function normalizeSelections(selections, filaments) {
-    const filamentIds = new Set((Array.isArray(filaments) ? filaments : []).map((roll) => roll?.id).filter(Boolean));
-    const seen = new Set();
-    const normalized = [];
+  function normalizeSelections(selections, filaments, material = '') {
+    const rolls = Array.isArray(filaments) ? filaments : [];
+    const rollMap = new Map(rolls.map((roll) => [roll?.id, roll]));
+    const wantedMaterial = normalized(material);
+    const seenTypes = new Set();
+    const normalizedSelections = [];
+
     for (const selection of Array.isArray(selections) ? selections : []) {
       const filamentId = text(selection?.filamentId);
       const sourceColorHex = text(selection?.sourceColorHex).toLowerCase();
-      if (!filamentIds.has(filamentId) || seen.has(filamentId) || !hexToRgb(sourceColorHex)) continue;
-      seen.add(filamentId);
-      normalized.push({ filamentId, sourceColorHex });
+      const roll = rollMap.get(filamentId);
+      const typeKey = filamentTypeKey(roll);
+      if (!roll || !typeKey || seenTypes.has(typeKey) || !hexToRgb(sourceColorHex)) continue;
+      if (wantedMaterial && normalized(roll.material) !== wantedMaterial) continue;
+      seenTypes.add(typeKey);
+      normalizedSelections.push({ filamentId, sourceColorHex });
     }
-    return normalized;
+    return normalizedSelections;
   }
 
   function moveSelection(selections, index, direction) {
@@ -221,6 +310,10 @@
     deltaE,
     extractDominantColors,
     activeFilaments,
+    filamentTypeKey,
+    materialOptions,
+    activeFilamentTypes,
+    inferProjectMaterial,
     effectiveTd,
     matchColorsToInventory,
     normalizeSelections,
