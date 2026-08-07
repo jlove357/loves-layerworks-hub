@@ -1,0 +1,97 @@
+.project-reuse-modal {
+  width: min(760px, calc(100vw - 36px));
+}
+
+.project-reuse-shell {
+  display: grid;
+  gap: 18px;
+}
+
+.project-reuse-source,
+.project-reuse-options,
+.project-reuse-reset-note,
+.project-reuse-progress {
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.12));
+  border-radius: 14px;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.project-reuse-source {
+  display: grid;
+  gap: 4px;
+}
+
+.project-reuse-source small,
+.project-reuse-option small,
+.project-reuse-reset-note,
+.project-reuse-progress span {
+  color: var(--muted, #a9a2b6);
+}
+
+.project-reuse-options {
+  display: grid;
+  gap: 12px;
+}
+
+.project-reuse-option {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: start;
+  gap: 10px;
+}
+
+.project-reuse-option input[type="checkbox"] {
+  margin-top: 4px;
+}
+
+.project-reuse-option span {
+  display: grid;
+  gap: 3px;
+}
+
+.project-reuse-file-list {
+  margin: 0;
+  padding-left: 22px;
+  color: var(--muted, #a9a2b6);
+}
+
+.project-reuse-file-list li + li {
+  margin-top: 4px;
+}
+
+.project-reuse-progress {
+  display: grid;
+  gap: 8px;
+}
+
+.project-reuse-progress progress {
+  width: 100%;
+}
+
+.project-reuse-progress-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: baseline;
+}
+
+.project-reuse-message {
+  min-height: 1.4em;
+  margin: 0;
+  color: var(--muted, #a9a2b6);
+}
+
+.project-reuse-message[data-tone="error"] {
+  color: #ff9b9b;
+}
+
+.project-reuse-message[data-tone="success"] {
+  color: #91e6ad;
+}
+
+@media (max-width: 720px) {
+  .project-reuse-progress-head {
+    display: grid;
+  }
+}
