@@ -2,7 +2,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('layerWorks', {
   appName: "Love's LayerWorks Hub",
-  milestone: 'M4B',
+  milestone: 'M3B',
   loadData: () => ipcRenderer.invoke('hub:load-data'),
   saveData: (data) => ipcRenderer.invoke('hub:save-data', data),
   dataStatus: () => ipcRenderer.invoke('hub:data-status'),
