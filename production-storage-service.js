@@ -29,6 +29,11 @@ function normalizeConfiguredRoot(value) {
   return path.resolve(text);
 }
 
+function isInside(parent, child) {
+  const relative = path.relative(path.resolve(parent), path.resolve(child));
+  return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
+}
+
 async function readStorageConfig() {
   await ensureHubStructure();
   try {
@@ -169,9 +174,7 @@ async function getProductionStorageStatus() {
 function allProductionFiles(data) {
   const entries = [];
   for (const project of data?.projects || []) {
-    for (const file of project.productionFiles || []) {
-      entries.push({ project, file });
-    }
+    for (const file of project.productionFiles || []) entries.push({ project, file });
   }
   return entries;
 }
@@ -216,9 +219,7 @@ async function checkProjectProductionFiles(_event, projectId) {
   if (!project) throw new Error('The selected project does not exist.');
   const root = await ensureProductionStorage();
   const details = [];
-  for (const file of project.productionFiles || []) {
-    details.push(await inspectEntry({ project, file }, root, false));
-  }
+  for (const file of project.productionFiles || []) details.push(await inspectEntry({ project, file }, root, false));
   return { ok: true, details };
 }
 
@@ -231,6 +232,14 @@ async function verifyProductionLibrary(event) {
     if (!loaded?.ok) throw new Error(loaded?.error || 'Hub data could not be loaded.');
     const root = await ensureProductionStorage();
     const entries = allProductionFiles(loaded.data);
+    event.sender.send('hub:production-integrity-progress', {
+      operationId,
+      completed: 0,
+      total: entries.length,
+      percent: entries.length ? 0 : 100,
+      fileName: '',
+      status: 'starting'
+    });
     const details = [];
     for (let index = 0; index < entries.length; index += 1) {
       if (controller.signal.aborted) throw Object.assign(new Error('Integrity verification canceled.'), { name: 'AbortError' });
@@ -265,10 +274,11 @@ async function cancelProductionStorageOperation(_event, operationId) {
   return { ok: true, active: true };
 }
 
-async function assertLibraryHealthy(data, root) {
+async function assertLibraryHealthy(data, root, signal = null) {
   const problems = [];
   for (const entry of allProductionFiles(data)) {
-    const result = await inspectEntry(entry, root, true);
+    if (signal?.aborted) throw Object.assign(new Error('Storage move canceled.'), { name: 'AbortError' });
+    const result = await inspectEntry(entry, root, true, signal);
     if (result.status !== 'ok') problems.push(result);
   }
   if (problems.length) {
@@ -277,9 +287,16 @@ async function assertLibraryHealthy(data, root) {
   }
 }
 
-async function directoryIsEmpty(directory) {
+async function libraryRootIsEmpty(root) {
   try {
-    return (await fsp.readdir(directory)).length === 0;
+    const entries = await fsp.readdir(root, { withFileTypes: true });
+    for (const entry of entries) {
+      if (entry.name === 'projects' && entry.isDirectory()) {
+        if ((await fsp.readdir(path.join(root, 'projects'))).length === 0) continue;
+      }
+      return false;
+    }
+    return true;
   } catch (error) {
     if (error?.code === 'ENOENT') return true;
     throw error;
@@ -288,7 +305,13 @@ async function directoryIsEmpty(directory) {
 
 async function copyTreeWithProgress(event, source, destination, totalBytes, operationId, controller, progressState) {
   await fsp.mkdir(destination, { recursive: true });
-  const entries = await fsp.readdir(source, { withFileTypes: true });
+  let entries = [];
+  try {
+    entries = await fsp.readdir(source, { withFileTypes: true });
+  } catch (error) {
+    if (error?.code === 'ENOENT') return;
+    throw error;
+  }
   for (const entry of entries) {
     if (controller.signal.aborted) throw Object.assign(new Error('Storage move canceled.'), { name: 'AbortError' });
     const from = path.join(source, entry.name);
@@ -345,38 +368,45 @@ async function relocateProductionStorage(event, mode = 'choose') {
       : path.join(selected, LIBRARY_FOLDER_NAME);
   }
   targetRoot = path.resolve(targetRoot);
-  if (targetRoot === path.resolve(currentRoot)) return { canceled: false, unchanged: true, status: await getProductionStorageStatus() };
+  const currentResolved = path.resolve(currentRoot);
+  if (targetRoot === currentResolved) return { canceled: false, unchanged: true, status: await getProductionStorageStatus() };
+  if (isInside(currentResolved, targetRoot) || isInside(targetRoot, currentResolved)) {
+    throw new Error('Choose a storage location that is separate from the current Production Files library.');
+  }
 
   const operationId = crypto.randomUUID();
   const controller = new AbortController();
   activeOperations.set(operationId, controller);
-  const loaded = await loadHubData();
-  if (!loaded?.ok) throw new Error(loaded?.error || 'Hub data could not be loaded.');
-
-  const sourceProjects = path.join(currentRoot, 'projects');
-  const usageBytes = await directoryUsage(sourceProjects);
-  const disk = await freeSpaceFor(path.dirname(targetRoot));
-  if (disk.freeBytes !== null && disk.freeBytes < usageBytes + COPY_SAFETY_BUFFER_BYTES) {
-    activeOperations.delete(operationId);
-    throw new Error(`Not enough free space to move Production Files safely. The move needs the current library size plus at least ${Math.round(COPY_SAFETY_BUFFER_BYTES / 1024 / 1024)} MB of free headroom.`);
-  }
-
-  const targetExistsEmpty = await directoryIsEmpty(targetRoot);
-  if (!targetExistsEmpty) {
-    activeOperations.delete(operationId);
-    throw new Error('The destination Production Files folder already exists and is not empty. Choose a different location.');
-  }
-
   const stageRoot = `${targetRoot}.pf2-staging-${operationId}`;
   let targetActivated = false;
   try {
-    await assertLibraryHealthy(loaded.data, currentRoot);
+    const loaded = await loadHubData();
+    if (!loaded?.ok) throw new Error(loaded?.error || 'Hub data could not be loaded.');
+    const sourceProjects = path.join(currentRoot, 'projects');
+    const usageBytes = await directoryUsage(sourceProjects);
+    event.sender.send('hub:production-storage-progress', {
+      operationId,
+      transferredBytes: 0,
+      totalBytes: usageBytes,
+      percent: 0,
+      fileName: 'Verifying source library'
+    });
+
+    const disk = await freeSpaceFor(path.dirname(targetRoot));
+    if (disk.freeBytes !== null && disk.freeBytes < usageBytes + COPY_SAFETY_BUFFER_BYTES) {
+      throw new Error(`Not enough free space to move Production Files safely. The move needs the current library size plus at least ${Math.round(COPY_SAFETY_BUFFER_BYTES / 1024 / 1024)} MB of free headroom.`);
+    }
+    if (!(await libraryRootIsEmpty(targetRoot))) {
+      throw new Error('The destination Production Files folder already exists and is not empty. Choose a different location.');
+    }
+
+    await assertLibraryHealthy(loaded.data, currentRoot, controller.signal);
     await fsp.rm(stageRoot, { recursive: true, force: true });
     const progressState = { bytes: 0, lastSent: 0 };
     await copyTreeWithProgress(event, sourceProjects, path.join(stageRoot, 'projects'), usageBytes, operationId, controller, progressState);
-    await assertLibraryHealthy(loaded.data, stageRoot);
+    await assertLibraryHealthy(loaded.data, stageRoot, controller.signal);
 
-    if (!(await directoryIsEmpty(targetRoot))) throw new Error('The destination changed during the storage move. No source files were deleted.');
+    if (!(await libraryRootIsEmpty(targetRoot))) throw new Error('The destination changed during the storage move. No source files were deleted.');
     await fsp.rm(targetRoot, { recursive: true, force: true });
     await fsp.rename(stageRoot, targetRoot);
     targetActivated = true;
@@ -407,7 +437,7 @@ async function relocateProductionStorage(event, mode = 'choose') {
   } catch (error) {
     await fsp.rm(stageRoot, { recursive: true, force: true }).catch(() => {});
     if (!targetActivated) {
-      // Source remains authoritative until the config update succeeds.
+      // The source remains authoritative until the verified config update succeeds.
     }
     if (error?.name === 'AbortError') return { canceled: true, operationId };
     throw error;
