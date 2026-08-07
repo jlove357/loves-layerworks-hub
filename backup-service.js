@@ -3,6 +3,7 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const { hubPaths, ensureHubStructure, requiredText } = require('./hub-config');
 const { readValidatedHubData, safeTimestamp, listValidBackups, persistHubData, loadHubData } = require('./hub-persistence');
+const { getProductionStorageStatus } = require('./production-storage-service');
 
 async function restoreBackup(_event, fileName) {
   const paths = await ensureHubStructure();
@@ -37,6 +38,7 @@ async function exportFullBackup() {
   const paths = await ensureHubStructure();
   const loaded = await loadHubData();
   if (!loaded.ok) throw new Error(loaded.error);
+  const storage = await getProductionStorageStatus();
 
   const result = await dialog.showOpenDialog({
     title: 'Choose where to save the full Hub backup',
@@ -47,6 +49,9 @@ async function exportFullBackup() {
   if (isInside(paths.root, selected)) {
     throw new Error('Choose a destination outside the live Love\'s LayerWorks Hub folder.');
   }
+  if (isInside(storage.root, selected)) {
+    throw new Error('Choose a backup destination outside the live Production Files storage folder.');
+  }
 
   const folderName = `Loves-LayerWorks-Hub-Backup-${safeTimestamp()}`;
   const destination = path.join(selected, folderName);
@@ -54,7 +59,7 @@ async function exportFullBackup() {
   await fs.copyFile(paths.dataFile, path.join(destination, 'hub-data.json'));
   await copyDirectory(path.join(paths.root, 'images'), path.join(destination, 'images'));
   await copyDirectory(paths.exportsDir, path.join(destination, 'exports'));
-  await copyDirectory(paths.filesDir, path.join(destination, 'files'));
+  await copyDirectory(path.join(storage.root, 'projects'), path.join(destination, 'files', 'projects'));
 
   const productionFileCount = loaded.data.projects.reduce(
     (sum, project) => sum + (Array.isArray(project.productionFiles) ? project.productionFiles.length : 0),
@@ -67,6 +72,8 @@ async function exportFullBackup() {
     rollCount: loaded.data.filaments.length,
     projectCount: loaded.data.projects.length,
     productionFileCount,
+    productionStorageMode: storage.isDefault ? 'default' : 'custom',
+    productionStorageSource: storage.root,
     includes: ['hub-data.json', 'images/swatches', 'images/originals', 'images/finished', 'exports', 'files/projects']
   };
   await fs.writeFile(path.join(destination, 'manifest.json'), JSON.stringify(manifest, null, 2), 'utf8');
@@ -85,11 +92,12 @@ async function exportFullBackup() {
 
 async function dataStatus() {
   const paths = await ensureHubStructure();
+  const storage = await getProductionStorageStatus();
   return {
     root: paths.root,
     dataFile: paths.dataFile,
     backupDir: paths.backupDir,
-    productionFilesDir: paths.productionProjectsDir,
+    productionFilesDir: path.join(storage.root, 'projects'),
     backups: await listValidBackups()
   };
 }
