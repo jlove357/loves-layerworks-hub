@@ -40,6 +40,7 @@ function hubPaths() {
     dataDir: path.join(root, 'data'),
     dataFile: path.join(root, 'data', 'hub-data.json'),
     previousFile: path.join(root, 'data', 'hub-data.previous.json'),
+    productionStorageConfigFile: path.join(root, 'data', 'production-storage.json'),
     swatchesDir: path.join(root, 'images', 'swatches'),
     originalsDir: path.join(root, 'images', 'originals'),
     finishedDir: path.join(root, 'images', 'finished'),
