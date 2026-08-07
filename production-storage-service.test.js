@@ -6,12 +6,16 @@ const Module = require('node:module');
 
 (async () => {
   const tempDocuments = await fs.mkdtemp(path.join(os.tmpdir(), 'layerworks-pf2-'));
+  const customParent = path.join(tempDocuments, 'ExternalStorage');
+  await fs.mkdir(customParent, { recursive: true });
+  let selectedFolder = customParent;
+
   const originalLoad = Module._load;
   Module._load = function patchedLoad(request, parent, isMain) {
     if (request === 'electron') {
       return {
         app: { getPath: () => tempDocuments },
-        dialog: { showOpenDialog: async () => ({ canceled: true, filePaths: [] }) }
+        dialog: { showOpenDialog: async () => ({ canceled: false, filePaths: [selectedFolder] }) }
       };
     }
     return originalLoad.call(this, request, parent, isMain);
@@ -38,6 +42,23 @@ const Module = require('node:module');
     assert.equal(Object.hasOwn(disk, 'freeBytes'), true);
     assert.equal(Object.hasOwn(disk, 'totalBytes'), true);
     assert.equal(disk.freeBytes === null || disk.freeBytes >= 0, true);
+
+    const events = [];
+    const fakeEvent = { sender: { send: (channel, payload) => events.push({ channel, payload }) } };
+    const moved = await service.relocateProductionStorage(fakeEvent, 'choose');
+    assert.equal(moved.canceled, false);
+    assert.equal(moved.status.isDefault, false);
+    assert.equal(moved.status.root, path.join(customParent, service.LIBRARY_FOLDER_NAME));
+    await fs.access(path.join(moved.status.root, 'projects'));
+    assert.equal((await service.readStorageConfig()).customRoot, moved.status.root);
+    assert.ok(events.some((entry) => entry.channel === 'hub:production-storage-progress'));
+
+    const restored = await service.relocateProductionStorage(fakeEvent, 'default');
+    assert.equal(restored.canceled, false);
+    assert.equal(restored.status.isDefault, true);
+    assert.equal(restored.status.root, expectedDefault);
+    assert.equal((await service.readStorageConfig()).customRoot, null);
+    await fs.access(path.join(expectedDefault, 'projects'));
 
     console.log('PF2 production storage service tests passed.');
   } finally {
