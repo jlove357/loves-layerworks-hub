@@ -29,6 +29,14 @@ async function inspectSourceFile(sourcePath) {
   };
 }
 
+function normalizedOriginalFileName(value, fallback) {
+  const fileName = String(value ?? fallback ?? '').trim();
+  if (!fileName || path.basename(fileName) !== fileName || /[\\/]/.test(fileName)) {
+    throw new Error('The production file original filename is invalid.');
+  }
+  return fileName;
+}
+
 async function selectProductionFile() {
   const result = await dialog.showOpenDialog({
     title: 'Choose a production file',
@@ -59,13 +67,15 @@ function progressPayload(copyId, projectId, fileId, fileName, transferredBytes, 
   };
 }
 
-async function copyProductionFile(event, request) {
+async function copyIntoManagedStorage(event, request) {
   const projectId = requiredText(request?.projectId, 'Project ID');
   const fileId = requiredText(request?.fileId, 'Production file ID');
   if (!UUID_PATTERN.test(projectId)) throw new Error('The project ID is invalid.');
   if (!UUID_PATTERN.test(fileId)) throw new Error('The production file ID is invalid.');
 
   const inspected = await inspectSourceFile(request?.sourcePath);
+  const originalFileName = normalizedOriginalFileName(request?.originalFileName, inspected.originalFileName);
+  const extension = path.extname(originalFileName).toLowerCase() || inspected.extension;
   const storageRoot = await ensureProductionStorage();
   const disk = await freeSpaceFor(storageRoot);
   if (disk.freeBytes !== null && disk.freeBytes < inspected.stats.size + COPY_SAFETY_BUFFER_BYTES) {
@@ -75,7 +85,7 @@ async function copyProductionFile(event, request) {
   const productionDir = await resolveProjectProductionDir(projectId, storageRoot);
   await fsp.mkdir(productionDir, { recursive: true });
 
-  const sanitizedOriginal = logic.sanitizeFileName(inspected.originalFileName);
+  const sanitizedOriginal = logic.sanitizeFileName(originalFileName);
   const storedFileName = `${fileId}_${sanitizedOriginal}`;
   const destination = path.join(productionDir, storedFileName);
   const relativePath = `files/projects/${projectId}/production/${storedFileName}`;
@@ -87,7 +97,7 @@ async function copyProductionFile(event, request) {
 
   activeCopies.set(copyId, { controller, destination, projectId, fileId });
   event.sender.send('hub:production-file-progress', progressPayload(
-    copyId, projectId, fileId, inspected.originalFileName, 0, inspected.stats.size
+    copyId, projectId, fileId, originalFileName, 0, inspected.stats.size
   ));
 
   const progressTransform = new Transform({
@@ -101,7 +111,7 @@ async function copyProductionFile(event, request) {
           copyId,
           projectId,
           fileId,
-          inspected.originalFileName,
+          originalFileName,
           transferredBytes,
           inspected.stats.size
         ));
@@ -128,7 +138,7 @@ async function copyProductionFile(event, request) {
       copyId,
       projectId,
       fileId,
-      inspected.originalFileName,
+      originalFileName,
       copiedStats.size,
       copiedStats.size,
       'complete'
@@ -137,10 +147,10 @@ async function copyProductionFile(event, request) {
     return {
       ok: true,
       fileId,
-      originalFileName: inspected.originalFileName,
+      originalFileName,
       storedFileName,
       relativePath,
-      extension: inspected.extension,
+      extension,
       sizeBytes: copiedStats.size,
       sha256
     };
@@ -151,7 +161,7 @@ async function copyProductionFile(event, request) {
       copyId,
       projectId,
       fileId,
-      inspected.originalFileName,
+      originalFileName,
       transferredBytes,
       inspected.stats.size,
       canceled ? 'canceled' : 'error'
@@ -161,6 +171,21 @@ async function copyProductionFile(event, request) {
   } finally {
     activeCopies.delete(copyId);
   }
+}
+
+async function copyProductionFile(event, request) {
+  return copyIntoManagedStorage(event, request);
+}
+
+async function copyExistingProductionFile(event, request) {
+  const sourceRelativePath = requiredText(request?.sourceRelativePath, 'Source production file path');
+  const sourcePath = await resolveProductionPath(sourceRelativePath);
+  return copyIntoManagedStorage(event, {
+    sourcePath,
+    originalFileName: requiredText(request?.originalFileName, 'Original production filename'),
+    projectId: request?.projectId,
+    fileId: request?.fileId
+  });
 }
 
 async function cancelProductionFileCopy(_event, copyId) {
@@ -203,6 +228,7 @@ async function removeProjectProductionFolder(projectId) {
 module.exports = {
   selectProductionFile,
   copyProductionFile,
+  copyExistingProductionFile,
   cancelProductionFileCopy,
   openProductionFile,
   showProductionFile,
