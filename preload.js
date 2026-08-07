@@ -20,7 +20,6 @@ contextBridge.exposeInMainWorld('layerWorks', {
   openProductionFile: (relativePath) => ipcRenderer.invoke('hub:open-production-file', relativePath),
   showProductionFile: (relativePath) => ipcRenderer.invoke('hub:show-production-file', relativePath),
   deleteProductionFile: (relativePath) => ipcRenderer.invoke('hub:delete-production-file', relativePath),
-  deleteProjectProductionFolder: (projectId) => ipcRenderer.invoke('hub:delete-project-production-folder', projectId),
   onProductionFileProgress: (callback) => {
     if (typeof callback !== 'function') return;
     ipcRenderer.on('hub:production-file-progress', (_event, payload) => callback(payload));
