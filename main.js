@@ -12,6 +12,15 @@ const {
   readManagedImage,
   deleteManagedImage
 } = require('./image-service');
+const {
+  selectProductionFile,
+  copyProductionFile,
+  cancelProductionFileCopy,
+  openProductionFile,
+  showProductionFile,
+  deleteProductionFile,
+  removeProjectProductionFolder
+} = require('./production-file-service');
 const { saveGalleryExport, revealGalleryExport } = require('./gallery-export-service');
 const { exportInventory, importInventory } = require('./inventory-transfer');
 const { dataStatus, restoreBackup, exportFullBackup } = require('./backup-service');
@@ -35,16 +44,34 @@ function createWindow() {
   window.loadFile('index.html');
 }
 
-app.whenReady().then(async () => {
-  await ensureHubStructure();
-  ipcMain.handle('hub:load-data', loadHubData);
-  ipcMain.handle('hub:save-data', (_event, data) => persistHubData(data).then(async (saved) => ({
+async function saveHubDataWithProjectCleanup(data) {
+  const before = await loadHubData();
+  const previousProjectIds = new Set(before?.ok ? before.data.projects.map((project) => project.id) : []);
+  const saved = await persistHubData(data);
+  const currentProjectIds = new Set(saved.projects.map((project) => project.id));
+  const removedProjectIds = [...previousProjectIds].filter((projectId) => !currentProjectIds.has(projectId));
+
+  for (const projectId of removedProjectIds) {
+    try {
+      await removeProjectProductionFolder(projectId);
+    } catch (error) {
+      console.warn(`Production folder cleanup failed for ${projectId}:`, error);
+    }
+  }
+
+  return {
     ok: true,
     data: saved,
     path: hubPaths().dataFile,
     savedAt: saved.updatedAt,
     backups: await listValidBackups()
-  })));
+  };
+}
+
+app.whenReady().then(async () => {
+  await ensureHubStructure();
+  ipcMain.handle('hub:load-data', loadHubData);
+  ipcMain.handle('hub:save-data', (_event, data) => saveHubDataWithProjectCleanup(data));
   ipcMain.handle('hub:data-status', dataStatus);
   ipcMain.handle('hub:select-swatch-image', selectSwatchImage);
   ipcMain.handle('hub:select-project-image', selectProjectImage);
@@ -54,6 +81,12 @@ app.whenReady().then(async () => {
   ipcMain.handle('hub:copy-finished-image', copyFinishedImage);
   ipcMain.handle('hub:read-managed-image', readManagedImage);
   ipcMain.handle('hub:delete-managed-image', deleteManagedImage);
+  ipcMain.handle('hub:select-production-file', selectProductionFile);
+  ipcMain.handle('hub:copy-production-file', copyProductionFile);
+  ipcMain.handle('hub:cancel-production-file-copy', cancelProductionFileCopy);
+  ipcMain.handle('hub:open-production-file', openProductionFile);
+  ipcMain.handle('hub:show-production-file', showProductionFile);
+  ipcMain.handle('hub:delete-production-file', deleteProductionFile);
   ipcMain.handle('hub:save-gallery-export', saveGalleryExport);
   ipcMain.handle('hub:reveal-gallery-export', revealGalleryExport);
   ipcMain.handle('hub:copy-text', (_event, value) => {
