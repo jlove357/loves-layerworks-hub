@@ -264,6 +264,7 @@
       }
 
       if (cancelRequested) throw new Error('Project duplication canceled.');
+      $('#cancelProjectReuseCopy').disabled = true;
       $('#projectReuseProgressTitle').textContent = 'Saving reusable draft';
       $('#projectReuseProgressText').textContent = 'Recalculating the current cost floor and verifying Hub data.';
       $('#projectReuseProgress').value = 100;
