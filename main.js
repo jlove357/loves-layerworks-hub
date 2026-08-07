@@ -8,6 +8,7 @@ const {
   selectFinishedImage,
   copySwatchImage,
   copyProjectImage,
+  copyExistingProjectImage,
   copyFinishedImage,
   readManagedImage,
   deleteManagedImage
@@ -15,6 +16,7 @@ const {
 const {
   selectProductionFile,
   copyProductionFile,
+  copyExistingProductionFile,
   cancelProductionFileCopy,
   openProductionFile,
   showProductionFile,
@@ -85,11 +87,13 @@ app.whenReady().then(async () => {
   ipcMain.handle('hub:select-finished-image', selectFinishedImage);
   ipcMain.handle('hub:copy-swatch-image', copySwatchImage);
   ipcMain.handle('hub:copy-project-image', copyProjectImage);
+  ipcMain.handle('hub:copy-existing-project-image', copyExistingProjectImage);
   ipcMain.handle('hub:copy-finished-image', copyFinishedImage);
   ipcMain.handle('hub:read-managed-image', readManagedImage);
   ipcMain.handle('hub:delete-managed-image', deleteManagedImage);
   ipcMain.handle('hub:select-production-file', selectProductionFile);
   ipcMain.handle('hub:copy-production-file', copyProductionFile);
+  ipcMain.handle('hub:copy-existing-production-file', copyExistingProductionFile);
   ipcMain.handle('hub:cancel-production-file-copy', cancelProductionFileCopy);
   ipcMain.handle('hub:open-production-file', openProductionFile);
   ipcMain.handle('hub:show-production-file', showProductionFile);
