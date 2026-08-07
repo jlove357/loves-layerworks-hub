@@ -1,4 +1,5 @@
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
 const logic = require('./palette-logic');
 
 function pixels(entries) {
@@ -46,5 +47,10 @@ assert.deepEqual(logic.normalizeSelections([
   { sourceColorHex: '#0000ff', filamentId: 'red' },
   { sourceColorHex: 'bad', filamentId: 'green' }
 ], filaments), selections);
+
+const rendererText = fs.readFileSync('renderer-palette.js', 'utf8');
+assert.match(rendererText, /Closest inventory colors/);
+assert.doesNotMatch(rendererText, /best filament stack/i);
+assert.match(rendererText, /Camera processing, lighting, display calibration/);
 
 console.log('Palette Assistant logic tests passed.');
