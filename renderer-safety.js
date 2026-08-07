@@ -90,8 +90,8 @@ async function load() {
     state.data = result.data;
     renderAll();
     setInventoryDisabled(false);
-    if (result.migrated) setStatus('Local data migrated to the locked M3A pricing schema', 'success');
-    else setStatus(result.created ? 'Local inventory file created' : 'Local inventory, projects, palettes, gallery, exports, and backups loaded', 'success');
+    if (result.migrated) setStatus('Local data migrated to the current Hub schema', 'success');
+    else setStatus(result.created ? 'Local shop file created' : 'Local inventory, projects, palettes, gallery, exports, and backups loaded', 'success');
   } catch (error) {
     console.error(error);
     state.loadFailed = true;
@@ -144,8 +144,8 @@ $('#restoreBackup').addEventListener('click', restoreBackup);
 $('#exportFullBackup').addEventListener('click', exportFullBackup);
 
 $('#appName').textContent = window.layerWorks?.appName || "Love's LayerWorks Hub";
-$('#milestone').textContent = window.layerWorks?.milestone || 'M3B';
-activateTab('inventory');
+$('#milestone').textContent = window.layerWorks?.milestone || 'V2';
+activateTab('planner');
 load();
 
 function loadFeatureScript(source) {
@@ -163,11 +163,13 @@ loadFeatureScript('td-logic.js')
   .then(() => loadFeatureScript('quote-logic.js'))
   .then(() => loadFeatureScript('renderer-projects.js'))
   .then(() => loadFeatureScript('gallery-logic.js'))
+  .then(() => loadFeatureScript('workflow-logic.js'))
   .then(() => loadFeatureScript('renderer-gallery.js'))
   .then(() => loadFeatureScript('gallery-export-logic.js'))
   .then(() => loadFeatureScript('renderer-gallery-export.js'))
   .then(() => loadFeatureScript('palette-logic.js'))
   .then(() => loadFeatureScript('renderer-palette.js'))
+  .then(() => loadFeatureScript('renderer-workflow-cleanup.js'))
   .catch((error) => {
     console.error(error);
     setStatus(`Feature load failed: ${error.message}`, 'error');

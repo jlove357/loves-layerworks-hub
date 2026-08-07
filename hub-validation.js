@@ -155,8 +155,8 @@ function normalizeUsage(item, index, filamentIds, projectPrefix) {
   }
   return {
     filamentId,
-    gramsEstimated: finiteNumber(item?.gramsEstimated ?? 0, `${prefix} estimated grams`, { minimum: 0 }),
-    gramsActual: nullableNumber(item?.gramsActual, `${prefix} actual grams`, { minimum: 0 }),
+    gramsEstimated: finiteNumber(item?.gramsEstimated ?? 0, `${prefix} slicer grams`, { minimum: 0 }),
+    gramsActual: nullableNumber(item?.gramsActual, `${prefix} legacy actual grams`, { minimum: 0 }),
     printOrder: nullableNumber(item?.printOrder, `${prefix} print order`, { minimum: 0 }),
     swapLayer: nullableNumber(item?.swapLayer, `${prefix} swap layer`, { minimum: 0 })
   };
@@ -173,6 +173,18 @@ function normalizePaletteSelection(item, index, filamentIds, projectPrefix) {
     throw new Error(`${prefix} source color must be a six-digit hex color.`);
   }
   return { filamentId, sourceColorHex };
+}
+
+function normalizeDeductionUsage(item, index, filamentIds, projectPrefix) {
+  const prefix = `${projectPrefix} inventory deduction ${index + 1}`;
+  const filamentId = requiredText(item?.filamentId, `${prefix} filament ID`);
+  if (!filamentIds.has(filamentId)) {
+    throw new Error(`${prefix} references a roll that does not exist.`);
+  }
+  return {
+    filamentId,
+    grams: finiteNumber(item?.grams, `${prefix} grams`, { minimum: 0.01 })
+  };
 }
 
 function normalizeProject(item, index, filamentIds) {
@@ -205,6 +217,11 @@ function normalizeProject(item, index, filamentIds) {
     seenPaletteFilaments.add(selection.filamentId);
   }
 
+  const deductionSource = Array.isArray(item?.inventoryDeductedUsage) ? item.inventoryDeductedUsage : [];
+  const inventoryDeductedUsage = deductionSource.map((entry, deductionIndex) => (
+    normalizeDeductionUsage(entry, deductionIndex, filamentIds, prefix)
+  ));
+
   return {
     id,
     customerName: asText(item?.customerName),
@@ -216,10 +233,10 @@ function normalizeProject(item, index, filamentIds) {
     heightMm: nullableNumber(item?.heightMm, `${prefix} height`, { minimum: 0.01 }),
     filamentUsage,
     paletteSelections,
-    estimatedTimeMinutes: finiteNumber(item?.estimatedTimeMinutes ?? 0, `${prefix} estimated time`, { minimum: 0 }),
-    actualTimeMinutes: nullableNumber(item?.actualTimeMinutes, `${prefix} actual time`, { minimum: 0 }),
-    estimatedFilamentCost: finiteNumber(item?.estimatedFilamentCost ?? 0, `${prefix} estimated filament cost`, { minimum: 0 }),
-    actualFilamentCost: nullableNumber(item?.actualFilamentCost, `${prefix} actual filament cost`, { minimum: 0 }),
+    estimatedTimeMinutes: finiteNumber(item?.estimatedTimeMinutes ?? 0, `${prefix} slicer time`, { minimum: 0 }),
+    actualTimeMinutes: nullableNumber(item?.actualTimeMinutes, `${prefix} legacy actual time`, { minimum: 0 }),
+    estimatedFilamentCost: finiteNumber(item?.estimatedFilamentCost ?? 0, `${prefix} slicer filament cost`, { minimum: 0 }),
+    actualFilamentCost: nullableNumber(item?.actualFilamentCost, `${prefix} legacy actual filament cost`, { minimum: 0 }),
     otherCosts: finiteNumber(item?.otherCosts ?? 0, `${prefix} other costs`, { minimum: 0 }),
     floorPrice: finiteNumber(item?.floorPrice ?? item?.suggestedPrice ?? 0, `${prefix} floor price`, { minimum: 0 }),
     sellPrice: nullableNumber(item?.sellPrice, `${prefix} list price`, { minimum: 0 }),
@@ -227,6 +244,8 @@ function normalizeProject(item, index, filamentIds) {
     dateQuoted: nullableTimestamp(item?.dateQuoted, `${prefix} quoted date`),
     datePrinted: nullableTimestamp(item?.datePrinted, `${prefix} printed date`),
     dateDelivered: nullableTimestamp(item?.dateDelivered, `${prefix} delivered date`),
+    inventoryDeductedAt: nullableTimestamp(item?.inventoryDeductedAt, `${prefix} inventory deduction date`),
+    inventoryDeductedUsage,
     captionDrafts: Array.isArray(item?.captionDrafts)
       ? item.captionDrafts.map((caption) => String(caption ?? '').trim()).filter(Boolean)
       : [],

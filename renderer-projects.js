@@ -13,26 +13,26 @@
     const panel = $('#planner-panel');
     panel.innerHTML = `
       <article class="quote-hero">
-        <div><small>MANUAL QUOTE CALCULATOR</small><h2>Price work from the rolls actually on your shelf.</h2><p>Create a project, assign physical rolls, check stock, and calculate a cost-floor guardrail from live filament cost and locked shop settings.</p></div>
+        <div><small>QUOTE</small><h2>Start the job here.</h2><p>Create a project, enter the print time and filament usage reported by your slicer, check stock, and calculate a cost-floor guardrail from the physical rolls on your shelf.</p></div>
         <button id="newProjectHero" class="primary large" type="button">Create a project</button>
       </article>
 
       <div class="quote-stats" aria-label="Project summary">
         <article><small>Projects</small><strong id="projectCount">0</strong><span>Draft and quoted</span></article>
-        <article><small>Drafts</small><strong id="draftProjectCount">0</strong><span>Still being estimated</span></article>
+        <article><small>Drafts</small><strong id="draftProjectCount">0</strong><span>Still being prepared</span></article>
         <article><small>Quoted</small><strong id="quotedProjectCount">0</strong><span>List price recorded</span></article>
         <article><small>Order needed</small><strong id="orderNeededCount">0</strong><span>Insufficient selected stock</span></article>
       </div>
 
       <article class="workspace-card quote-workspace">
-        <div class="workspace-head"><div><small>PROJECT DESK</small><h2>Manual quotes</h2></div><button id="newProject" class="primary" type="button">New project</button></div>
+        <div class="workspace-head"><div><small>PROJECT DESK</small><h2>Quotes</h2></div><button id="newProject" class="primary" type="button">New project</button></div>
         <div class="quote-filters">
           <label><span>Search projects</span><input id="projectSearch" type="search" placeholder="Customer, status, color, brand, or roll code"></label>
           <label><span>Status</span><select id="projectStatusFilter"><option value="all">Draft and quoted</option><option value="draft">Draft</option><option value="quoted">Quoted</option></select></label>
         </div>
         <div id="projectNotice" class="notice" hidden></div>
         <div id="projectList" class="project-grid" aria-live="polite"></div>
-        <div id="projectEmpty" class="empty-state"><b>No projects yet</b><p>Create a draft project to begin a manual quote.</p><button id="newFirstProject" type="button">Create first project</button></div>
+        <div id="projectEmpty" class="empty-state"><b>No projects yet</b><p>Create a draft project to begin a quote.</p><button id="newFirstProject" type="button">Create first project</button></div>
       </article>
 
       <details class="workspace-card pricing-settings">
@@ -69,24 +69,24 @@
               <label>Status<select id="projectStatus"><option value="draft">Draft</option><option value="quoted">Quoted</option></select></label>
               <label>Print width (mm)<input id="projectWidth" type="number" min="0.01" step="0.1" required></label>
               <label>Print height (mm)<input id="projectHeight" type="number" min="0.01" step="0.1" required></label>
-              <label>Estimated print time (minutes)<input id="projectMinutes" type="number" min="0" step="1" required></label>
+              <label>Slicer print time (minutes)<input id="projectMinutes" type="number" min="0" step="1" required><small>Use the time reported after slicing.</small></label>
               <label>List Price (sellPrice)<input id="projectSellPrice" type="number" min="0" step="0.01" placeholder="Leave blank for floor only"></label>
               <label class="project-custom wide"><input id="projectCustom" type="checkbox"><span><strong>Custom project</strong><small>Applies the shop-wide defaultDesignFee once to this project.</small></span></label>
             </div>
 
             <section class="reference-field">
-              <div><span>Customer reference image</span><small>Recordkeeping only. M3A performs no image processing.</small></div>
+              <div><span>Customer reference image</span><small>Stored with the project and available to Palette Assistant.</small></div>
               <div class="reference-controls"><div id="referencePreview" class="reference-preview"><span>No reference attached</span></div><div><button id="chooseReference" type="button">Choose image</button><button id="removeReference" type="button">Remove image</button><p id="referenceFileName">No file selected</p></div></div>
             </section>
 
             <section class="usage-editor">
-              <div class="usage-editor-head"><div><small>PHYSICAL ROLLS</small><h3>Estimated filament usage</h3></div><div class="add-usage"><select id="addUsageSelect"><option value="">Select an active roll</option></select><button id="addUsage" type="button">Add roll</button></div></div>
-              <p class="section-intro">Cost per gram is calculated live from each selected roll's purchase cost and starting filament weight.</p>
+              <div class="usage-editor-head"><div><small>PHYSICAL ROLLS</small><h3>Slicer filament usage</h3></div><div class="add-usage"><select id="addUsageSelect"><option value="">Select an active roll</option></select><button id="addUsage" type="button">Add roll</button></div></div>
+              <p class="section-intro">Enter the grams reported by your slicer. Cost per gram is calculated live from each selected roll's purchase cost and starting filament weight. These grams are also the normal inventory deduction when the project is finished.</p>
               <div id="usageRows" class="usage-rows"></div>
               <div id="usageEmpty" class="mini-empty">Add at least one active physical roll.</div>
             </section>
 
-            <label class="project-notes">Notes<textarea id="projectNotes" rows="4" maxlength="2000" placeholder="Request details, frame notes, delivery notes, or quote assumptions"></textarea></label>
+            <label class="project-notes">Notes<textarea id="projectNotes" rows="4" maxlength="2000" placeholder="Request details, frame notes, delivery notes, failure-watch times, or other reminders"></textarea></label>
           </section>
 
           <aside class="quote-preview" aria-live="polite">
@@ -125,13 +125,6 @@
       settingsDirty = true;
       $('#settingsDirtyLabel').textContent = 'Unsaved pricing changes.';
     });
-
-    const badge = document.querySelector('.badge');
-    badge.querySelector('b').textContent = 'M3A';
-    const badgeText = [...badge.childNodes].find((node) => node.nodeType === Node.TEXT_NODE);
-    if (badgeText) badgeText.textContent = ' Core Quote';
-    const footerLead = document.querySelector('footer span:first-child');
-    footerLead.replaceChildren(createTextElement('b', '', 'Milestone 3A:'), document.createTextNode(' Manual Quote Calculator'));
   }
 
   function currentProject() {
@@ -186,7 +179,7 @@
     identity.className = 'project-identity';
     identity.append(
       createTextElement('h3', '', projectLabel(project)),
-      createTextElement('p', '', `${project.widthMm ?? '—'} × ${project.heightMm ?? '—'} mm · ${Math.round(project.estimatedTimeMinutes || 0)} min`)
+      createTextElement('p', '', `${project.widthMm ?? '—'} × ${project.heightMm ?? '—'} mm · Slicer ${Math.round(project.estimatedTimeMinutes || 0)} min`)
     );
     top.append(identity, createTextElement('span', `project-status ${project.status}`, project.status));
 
@@ -239,7 +232,7 @@
     const hasAny = projects.length > 0;
     $('#projectEmpty').hidden = visible.length > 0;
     $('#projectEmpty b').textContent = hasAny ? 'No projects match these filters' : 'No projects yet';
-    $('#projectEmpty p').textContent = hasAny ? 'Clear the search or change the status filter.' : 'Create a draft project to begin a manual quote.';
+    $('#projectEmpty p').textContent = hasAny ? 'Clear the search or change the status filter.' : 'Create a draft project to begin a quote.';
     $('#newFirstProject').hidden = hasAny;
 
     if (!settingsDirty) fillSettingsForm();
@@ -312,6 +305,7 @@
       widthMm: null,
       heightMm: null,
       filamentUsage: [],
+      paletteSelections: [],
       estimatedTimeMinutes: 0,
       actualTimeMinutes: null,
       estimatedFilamentCost: 0,
@@ -323,6 +317,8 @@
       dateQuoted: null,
       datePrinted: null,
       dateDelivered: null,
+      inventoryDeductedAt: null,
+      inventoryDeductedUsage: [],
       captionDrafts: [],
       notes: '',
       updatedAt: now
@@ -436,7 +432,7 @@
       identity.className = 'usage-identity';
       identity.append(createTextElement('strong', '', roll.colorName), createTextElement('span', '', `${roll.brand} · ${roll.material} · ${roll.rollCode}${roll.archived ? ' · Archived' : ''}`));
       const gramsLabel = document.createElement('label');
-      gramsLabel.append(createTextElement('span', '', 'Estimated grams'));
+      gramsLabel.append(createTextElement('span', '', 'Slicer grams'));
       const input = document.createElement('input');
       input.type = 'number';
       input.min = '0.1';
@@ -544,7 +540,7 @@
         : '';
 
       $('#quoteBreakdown').replaceChildren();
-      addBreakdownRow('Estimated filament', logic.money(quote.estimatedFilamentCost));
+      addBreakdownRow('Slicer filament', logic.money(quote.estimatedFilamentCost));
       addBreakdownRow('Machine rate', `${logic.money(quote.effectiveMachineRatePerHour)} / hr`);
       addBreakdownRow('Machine cost', logic.money(quote.machineCost));
       addBreakdownRow('Consumables', logic.money(quote.consumablesCost));
@@ -562,7 +558,7 @@
       } else {
         stock.append(createTextElement('strong', quote.orderNeeded ? 'order-needed-text' : 'stock-ready-text', quote.orderNeeded ? 'Order Needed' : 'Selected inventory is sufficient'));
         for (const entry of quote.usage) {
-          stock.append(createTextElement('span', '', `${entry.roll?.colorName || 'Missing roll'}: ${formatGrams(entry.gramsEstimated)} estimated · ${logic.money(entry.estimatedCost)}${entry.orderNeeded ? ` · ${formatGrams(entry.shortageG)} short` : ''}`));
+          stock.append(createTextElement('span', '', `${entry.roll?.colorName || 'Missing roll'}: ${formatGrams(entry.gramsEstimated)} slicer usage · ${logic.money(entry.estimatedCost)}${entry.orderNeeded ? ` · ${formatGrams(entry.shortageG)} short` : ''}`));
         }
       }
     } catch (error) {
@@ -579,11 +575,11 @@
     const heightMm = Number($('#projectHeight').value);
     const estimatedTimeMinutes = Number($('#projectMinutes').value);
     if (!(widthMm > 0) || !(heightMm > 0)) throw new Error('Enter a print width and height greater than zero.');
-    if (!Number.isFinite(estimatedTimeMinutes) || estimatedTimeMinutes < 0) throw new Error('Estimated print time must be zero or greater.');
+    if (!Number.isFinite(estimatedTimeMinutes) || estimatedTimeMinutes < 0) throw new Error('Slicer print time must be zero or greater.');
     if (!usageDraft.length) throw new Error('Select at least one physical filament roll.');
     const filamentUsage = usageDraft.map((usage) => {
       const gramsEstimated = Number(usage.gramsEstimated);
-      if (!(gramsEstimated > 0)) throw new Error('Every selected roll needs estimated grams greater than zero.');
+      if (!(gramsEstimated > 0)) throw new Error('Every selected roll needs slicer grams greater than zero.');
       const oldUsage = existing?.filamentUsage?.find((item) => item.filamentId === usage.filamentId);
       return {
         filamentId: usage.filamentId,

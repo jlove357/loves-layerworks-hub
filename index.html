@@ -16,17 +16,20 @@
       </div>
 
       <nav role="tablist" aria-label="Main workspace">
-        <button id="inventory-tab" class="tab active" role="tab" aria-selected="true" data-tab="inventory" data-title="Inventory">
+        <button id="planner-tab" class="tab active" role="tab" aria-selected="true" data-tab="planner" data-title="Quote">
+          <i>◇</i><span><strong>Quote</strong><small>Projects and pricing</small></span>
+        </button>
+        <button id="palette-tab" class="tab" role="tab" aria-selected="false" data-tab="palette" data-title="Palette Assistant" tabindex="-1">
+          <i>◈</i><span><strong>Palette Assistant</strong><small>Inventory color planning</small></span>
+        </button>
+        <button id="gallery-tab" class="tab" role="tab" aria-selected="false" data-tab="gallery" data-title="Gallery Studio" tabindex="-1">
+          <i>▦</i><span><strong>Gallery Studio</strong><small>Finished work</small></span>
+        </button>
+        <button id="inventory-tab" class="tab" role="tab" aria-selected="false" data-tab="inventory" data-title="Inventory" tabindex="-1">
           <i>◫</i><span><strong>Inventory</strong><small>Roll Brain</small></span>
         </button>
         <button id="td-tab" class="tab" role="tab" aria-selected="false" data-tab="td" data-title="TD Lab" tabindex="-1">
           <i>◎</i><span><strong>TD Lab</strong><small>Measurements</small></span>
-        </button>
-        <button id="planner-tab" class="tab" role="tab" aria-selected="false" data-tab="planner" data-title="Quote & Palette Planner" tabindex="-1">
-          <i>◇</i><span><strong>Quote & Palette</strong><small>Projects and pricing</small></span>
-        </button>
-        <button id="gallery-tab" class="tab" role="tab" aria-selected="false" data-tab="gallery" data-title="Gallery Studio" tabindex="-1">
-          <i>▦</i><span><strong>Gallery Studio</strong><small>Finished work</small></span>
         </button>
       </nav>
 
@@ -38,14 +41,26 @@
 
     <main>
       <header>
-        <div><small>LOVE'S LAYERWORKS</small><h1 id="pageTitle">Inventory</h1></div>
+        <div><small>LOVE'S LAYERWORKS</small><h1 id="pageTitle">Quote</h1></div>
         <div class="header-actions">
-          <span id="status" class="status" data-tone="neutral" aria-live="polite">Loading local inventory</span>
-          <span class="badge"><b id="milestone">M1B</b> Data Safety</span>
+          <span id="status" class="status" data-tone="neutral" aria-live="polite">Loading local shop data</span>
+          <span class="badge"><b id="milestone">V2</b> Workflow Cleanup</span>
         </div>
       </header>
 
-      <section id="inventory-panel" role="tabpanel" aria-labelledby="inventory-tab">
+      <section id="planner-panel" role="tabpanel" aria-labelledby="planner-tab">
+        <article class="coming-card"><div><small>PROJECT DESK</small><h2>Quote</h2><p>Create projects, enter slicer print specifications, and calculate pricing from the physical rolls on your shelf.</p></div><span><b>Loading</b><small>Project workspace</small></span></article>
+      </section>
+
+      <section id="palette-panel" role="tabpanel" aria-labelledby="palette-tab" hidden>
+        <article class="coming-card"><div><small>PALETTE ASSISTANT</small><h2>Inventory color planning</h2><p>Match project reference colors to active filament inventory without burying the palette tools below the quote list.</p></div><span><b>Loading</b><small>Palette workspace</small></span></article>
+      </section>
+
+      <section id="gallery-panel" role="tabpanel" aria-labelledby="gallery-tab" hidden>
+        <article class="coming-card"><div><small>FINISHED WORK</small><h2>Gallery Studio</h2><p>Finished project records, managed photos, portfolio exports, and offline caption drafts.</p></div><span><b>Loading</b><small>Gallery workspace</small></span></article>
+      </section>
+
+      <section id="inventory-panel" role="tabpanel" aria-labelledby="inventory-tab" hidden>
         <article class="inventory-hero">
           <div>
             <small>ROLL BRAIN</small>
@@ -120,18 +135,10 @@
       </section>
 
       <section id="td-panel" role="tabpanel" aria-labelledby="td-tab" hidden>
-        <article class="coming-card"><div><small>MEASUREMENT WORKSPACE</small><h2>TD Lab</h2><p>Stock and personally measured transmission-distance records will be built after the complete inventory safety layer is approved.</p></div><span><b>Coming Soon</b><small>Milestone 2</small></span></article>
+        <article class="coming-card"><div><small>MEASUREMENT WORKSPACE</small><h2>TD Lab</h2><p>Stock and personally measured transmission-distance records for filament planning.</p></div><span><b>Loading</b><small>TD workspace</small></span></article>
       </section>
 
-      <section id="planner-panel" role="tabpanel" aria-labelledby="planner-tab" hidden>
-        <article class="coming-card"><div><small>PROJECT DESK</small><h2>Quote & Palette Planner</h2><p>Customer projects and manual quotes will use the physical rolls created in Roll Brain.</p></div><span><b>Coming Soon</b><small>Milestone 3A</small></span></article>
-      </section>
-
-      <section id="gallery-panel" role="tabpanel" aria-labelledby="gallery-tab" hidden>
-        <article class="coming-card"><div><small>FINISHED WORK</small><h2>Gallery Studio</h2><p>Finished project records, managed photos, portfolio exports, and offline caption drafts remain later milestones.</p></div><span><b>Coming Soon</b><small>Milestone 4A</small></span></article>
-      </section>
-
-      <footer><span><b>Milestone 1B:</b> Backups, managed images, import, and export</span><span class="ready"><i></i>Ready for local testing</span></footer>
+      <footer><span><b>V2:</b> Workflow Cleanup</span><span class="ready"><i></i>Ready for local testing</span></footer>
     </main>
   </div>
 
