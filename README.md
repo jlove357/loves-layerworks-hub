@@ -11,67 +11,137 @@ main @ 0347b3462d8e70bfae2a88fe9adc08b198217e13
 app version 0.9.0
 ```
 
-## Active milestone: V2.1 PF1 — Production Files Core
+## V2.1 Production Files
 
-PF1 adds managed production-file attachments to saved projects without changing the accepted V2 workflow. The app version for PF1 is `0.10.0`.
+**PF1 — Production Files Core** is accepted. PF1 added managed project files, roles, Primary designation, SHA-256 metadata, async copy/cancel, safe removal, and Full External Backup inclusion.
 
-The accepted V2 continues to provide:
+**Active milestone: PF2 — Storage Management & Integrity**
 
-- **Quote** as the default startup workspace
-- **Palette Assistant** as its own top-level workspace
-- **Gallery Studio** for finished work, exports, and captions
-- **Inventory** for individual physical filament rolls, manual adjustments, imports/exports, and backups
-- **TD Lab** for stock and measured transmission-distance records
-- Verified local JSON persistence with 10 rolling backups and full external backup export
-- Managed swatch, customer-reference, and finished-print photos
-- Unified project records and the locked pricing model
-- Local Palette Assistant color extraction and material-specific inventory matching
-- One-time, confirmed inventory deduction when a project first moves into a completed status
+PF2 app version: `0.11.0`.
 
-The navigation order remains:
+PF3 Project Duplication / Reuse has not started.
+
+The normal navigation remains:
 
 ```text
 Quote → Palette Assistant → Gallery Studio → Inventory → TD Lab
 ```
 
-## PF1 Production Files Core
+## PF2 storage model
 
-Every saved project can now manage reproducibility files through a dedicated **Production files** button in Quote and Gallery Studio.
-
-Managed production files are copied to:
+Core Hub data remains in:
 
 ```text
-Documents\Love's LayerWorks Hub\files\projects\<project-id>\production\
+Documents\Love's LayerWorks Hub\data\hub-data.json
 ```
 
-The stored disk name uses a collision-safe file ID plus a sanitized original filename:
+Production Files can now live separately. The default physical library remains:
+
+```text
+Documents\Love's LayerWorks Hub\files\
+```
+
+A custom location creates or uses a dedicated folder named:
+
+```text
+Love's LayerWorks Production Files
+```
+
+The selected physical location is stored in a machine-local config:
+
+```text
+Documents\Love's LayerWorks Hub\data\production-storage.json
+```
+
+The absolute drive path is intentionally **not** stored in `hub-data.json`. Project records continue to store portable logical paths such as:
+
+```text
+files/projects/<project-id>/production/<stored-file-name>
+```
+
+This keeps project JSON and rolling backups independent of a specific Windows drive letter.
+
+## Storage status and free-space protection
+
+The Production Files manager now displays:
+
+- current physical Production Files location
+- Default vs Custom storage mode
+- actual managed library size on disk
+- free space on the current storage volume
+
+Before a managed copy is started, PF2 checks available disk space when Windows/Node can report it. The copy is rejected if it would leave less than 256 MB of safety headroom.
+
+The existing 100 MB explicit large-file warning remains.
+
+## Missing-file and integrity checks
+
+Opening a project's Production Files manager performs a quick availability/size check for that project's files. File rows can report:
+
+- **Available**
+- **Missing**
+- **Size changed**
+- **Hash mismatch** after a full verification
+- **Check failed**
+
+**Verify library** performs a full SHA-256 scan of every production file referenced by Hub projects and compares the live file against its saved size and SHA-256 metadata. Verification runs asynchronously and can be canceled.
+
+The integrity scan does not silently modify or repair files.
+
+## Duplicate detection
+
+PF2 uses the SHA-256 calculated during the managed copy to detect identical files already referenced anywhere in the Hub.
+
+If a matching hash already exists, the Hub shows the existing project/file references and asks whether to keep another independent managed copy.
+
+PF2 intentionally does **not** physically deduplicate files and does not create shared file references. Each project's managed copy remains independently deletable.
+
+## Verified storage relocation
+
+**Change location** moves only the Production Files library; the Hub database, images, exports, and rolling backups remain under the normal Hub root.
+
+A relocation follows this safety sequence:
+
+1. resolve the current and destination storage roots
+2. require enough free destination space for the current library plus 256 MB safety headroom when free-space data is available
+3. refuse a non-empty destination library rather than merge or overwrite it
+4. SHA-256 verify every referenced source file before moving
+5. stream-copy the library into a staging folder with progress and cancel support
+6. SHA-256 verify the staged copies again
+7. activate the verified destination
+8. verify and save the machine-local storage config
+9. only then remove the old library
+
+If the final old-location cleanup fails, the Hub remains pointed at the verified new location and reports that the old copy needs manual cleanup.
+
+**Use default** performs the same verified process when moving the library back to the standard Documents location.
+
+## Production Files Core behavior retained from PF1
+
+Every saved project can manage production assets through **Production files** in Quote and Gallery Studio.
+
+Stored production filenames use:
 
 ```text
 <file-id>_<sanitized-original-name>
 ```
 
-Example:
-
-```text
-a1b2c3..._Dragon Eye Final.3mf
-```
-
-The project record stores:
+Project metadata includes:
 
 - file ID
 - user-facing label
 - role
 - original filename
 - stored filename
-- managed relative path
+- logical managed relative path
 - extension
 - size in bytes
-- SHA256 hash
-- primary-file flag
+- SHA-256 hash
+- Primary flag
 - notes
 - added timestamp
 
-Supported roles are:
+Roles remain:
 
 - Final Print File
 - Bambu Studio Project
@@ -81,77 +151,56 @@ Supported roles are:
 - Source Artwork
 - Other
 
-The first attached file becomes Primary automatically; any other file can later be marked Primary.
+Controls remain **Add file**, **Open**, **Show in folder**, **Mark primary**, **Save details**, and **Remove**.
 
-### Production-file controls
+Project deletion remains data-first: the verified project JSON deletion succeeds before its managed production project folder is cleaned up.
 
-Each attached file supports:
+## Backup behavior
 
-- **Open** — hands the managed copy to the Windows default application
-- **Show in folder** — reveals the managed copy in Explorer
-- **Mark primary**
-- editing label, role, and notes
-- **Remove** with confirmation and managed-disk cleanup after the project record saves
+The 10 rolling Hub backups remain JSON-only; large STL/3MF/etc. files are not duplicated into every rolling backup.
 
-Large-file copying runs asynchronously in the Electron main process with progress reporting and a cancel control. Files at or above 100 MB receive an explicit size warning before copying.
-
-Project deletion remains data-first: the verified project save completes before the associated `files/projects/<project-id>/` folder is removed. Production files are not duplicated into the 10 rolling JSON backups.
-
-**Full External Backup does include managed production files** under `files/projects` and records their count in the backup manifest.
-
-## Quote and slicer values
-
-The normal project UI uses **Slicer print time** and **Slicer filament usage** rather than asking for separate estimated and actual production values. Existing JSON field names remain internally compatible with accepted V2 data and backups.
-
-Filament cost remains live from each selected physical roll using:
+**Full External Backup includes the active Production Files library** under:
 
 ```text
-purchaseCost / startingFilamentWeightG
+files/projects/
 ```
 
-## Palette Assistant
+This remains true whether the live library is in Documents or on a custom drive. The backup manifest records the live storage mode and source location for diagnostic purposes.
+
+## Quote and Palette behavior
+
+The accepted V2 pricing model and slicer-time/slicer-usage workflow are unchanged by PF2.
 
 Palette Assistant remains a planning shortlist for raw filament colors. HueForge or Chroma Canvas remains authoritative for production preview and filament ordering.
 
-### Known post-V2 palette refinement
-
-The accepted V2 Palette Assistant may still return a weak fifth match when the remaining inventory candidates are poor matches. A future refinement should use a dynamic palette size and reject weak matches rather than filling a fixed count.
-
-## Data location
-
-Core Hub data remains in:
-
-```text
-Documents\Love's LayerWorks Hub\data\hub-data.json
-```
-
-PF1 keeps production files under the same Hub root for now. Configurable large-file storage, storage-usage reporting, free-space checks, integrity scans, and duplicate-file detection belong to the separate PF2 milestone and are not part of PF1.
+The known weak fifth palette match remains a deferred post-V2 refinement.
 
 ## Setup and launch
 
 1. Open GitHub Desktop and select `loves-layerworks-hub`.
-2. Confirm the branch is `main` after PF1 is merged.
+2. Use the PF2 branch for milestone testing until acceptance; after merge, return to `main`.
 3. Click **Fetch origin**, then **Pull origin**.
 4. Double-click `launch.bat`.
 
 Run `setup.bat` only on first setup or when dependencies change.
 
-## PF1 acceptance test
+## PF2 acceptance test
 
-1. Launch the Hub and confirm existing V2 projects, Inventory, Palette Assistant, Gallery Studio, and TD Lab still load normally.
-2. In Quote, choose a saved draft/quoted project and click **Production files**.
-3. Attach a small `.stl` or `.3mf` and confirm copy progress appears, then confirm the file remains after restart.
-4. Confirm the first file is Primary and the UI shows original filename, managed size, stored filename, and a SHA256 prefix.
-5. Change its label, role, and notes; click **Save details**; restart and confirm the metadata persists.
-6. Use **Open** and confirm Windows opens the managed copy with its default associated application.
-7. Use **Show in folder** and confirm Explorer reveals the managed copy under `files/projects/<project-id>/production/`.
-8. Attach a second file with the same original filename and confirm both files coexist with different collision-safe stored names.
-9. Mark the second file Primary and confirm only one file is Primary after restart.
-10. Remove one attached file, confirm the warning, and verify its managed disk copy disappears while the other remains.
-11. In Gallery Studio, open Production files for a finished/delivered/gallery project and confirm the same manager works there.
-12. Test a file at least 100 MB if convenient: confirm the warning appears, progress updates while copying, and the UI stays responsive. Cancel one large copy and confirm no attachment is saved.
-13. Export a Full External Backup and confirm it contains `files/projects` along with the existing data/images/exports structure.
-14. Delete a disposable draft/quoted project that has an attached production file and confirm its managed project folder is cleaned up after the project deletion succeeds.
-15. Restart once more and confirm remaining projects/files still load correctly.
+1. Launch the Hub and confirm existing projects and PF1 attachments still load.
+2. Open **Production files** for a project and confirm the new storage panel shows a physical location, managed size, and free-space reading (or clearly says unavailable if the OS cannot provide one).
+3. Confirm existing attached files show **Available** and still support Open / Show in folder.
+4. Click **Verify library** and confirm all normal files verify successfully by SHA-256.
+5. Temporarily rename one managed file in Explorer, reopen Production files, and confirm it reports **Missing**. Restore the exact filename and confirm Refresh/reopen returns it to Available.
+6. Attach the same source file to another project (or attach a source whose SHA-256 already exists). Confirm the duplicate warning identifies an existing project/file and lets you either discard the new copy or deliberately keep an independent copy.
+7. Confirm a normal new attachment still copies, persists after restart, and updates the managed-size display.
+8. Click **Change location** and choose a test parent folder on another local location/drive if available. Confirm progress appears and the Hub reports the verified move as complete.
+9. Confirm the displayed storage path changes to the custom `Love's LayerWorks Production Files` folder.
+10. Restart the Hub and confirm attachments remain Available, Open, and Show in folder from the new physical location.
+11. Run **Verify library** again at the new location and confirm hashes still pass.
+12. Attach a new file after relocation and confirm it is physically stored under the custom library, not the old Documents `files/projects` tree.
+13. Run a **Full External Backup** and confirm its backup folder contains `files/projects` even though the live Production Files library is custom.
+14. Click **Use default** and confirm the same verified move returns the library to the default Documents location without losing files.
+15. Restart and run Verify library once more.
+16. Confirm Quote pricing, Palette Assistant, Gallery Studio, Inventory, TD Lab, rolling backups, and normal project save/delete behavior still work as before.
 
-PF1 remains pending manual acceptance. PF2 storage management and PF3 project duplication/reuse are not included in this milestone.
+PF2 remains pending Windows manual acceptance. PF3 Project Duplication / Reuse is intentionally out of scope and will not begin automatically.
