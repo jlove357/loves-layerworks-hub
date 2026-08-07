@@ -2,9 +2,16 @@
 
 A private, local Windows desktop workspace for Love's LayerWorks.
 
-## Active build: V2 Workflow Cleanup
+## V2 status: COMPLETE
 
-The current runnable version provides:
+V2 has completed manual end-to-end acceptance. The accepted functional baseline before this documentation-only closeout is:
+
+```text
+main @ 0347b3462d8e70bfae2a88fe9adc08b198217e13
+app version 0.9.0
+```
+
+The accepted V2 provides:
 
 - **Quote** as the default startup workspace
 - **Palette Assistant** as its own top-level workspace
@@ -45,9 +52,15 @@ Manual **Subtract filament** remains available in Inventory for failed prints, p
 
 ## Palette Assistant
 
-Palette Assistant remains a planning shortlist for raw filament colors. It does not predict the finished layered print. Camera processing, lighting, display calibration, filament finish, layer thickness, background color, TD, and filament order can all change the printed appearance. HueForge or Chroma Canvas remains authoritative for production preview and filament ordering.
+Palette Assistant is a planning shortlist for raw filament colors. It does not predict the finished layered print. Camera processing, lighting, display calibration, filament finish, layer thickness, background color, TD, and filament order can all change the printed appearance. HueForge or Chroma Canvas remains authoritative for production preview and filament ordering.
 
 For color matching only, identical active physical rolls with the same normalized brand, material, color name, and color hex are grouped into one candidate. Physical rolls remain separate inventory records. The **Material to match** control prevents automatic mixing of PLA+, PETG, or other materials.
+
+### Known post-V2 palette refinement
+
+The accepted V2 Palette Assistant may still return a weak fifth match when the image contains five extracted colors but the remaining inventory candidates are poor matches. This is accepted as a planning-tool limitation and is not a V2 blocker.
+
+A future refinement should use a dynamic palette size instead of forcing a fixed target: return only meaningful source colors and inventory matches that meet a reasonable similarity threshold, with a practical upper bound around 8 colors. This work is intentionally deferred until after V2.
 
 ## Data location
 
@@ -62,28 +75,27 @@ Managed images, exports, and rolling backups remain in the existing managed Hub 
 ## Setup and launch
 
 1. Open GitHub Desktop and select `loves-layerworks-hub`.
-2. Confirm the branch is `main` after the cleanup PR is merged.
+2. Confirm the branch is `main`.
 3. Click **Fetch origin**, then **Pull origin**.
 4. Double-click `launch.bat`.
 
 Run `setup.bat` only on first setup or when dependencies change.
 
-## V2 Workflow Cleanup acceptance test
+## V2 acceptance record
 
-1. Launch the Hub and confirm it opens directly to **Quote**.
-2. Confirm the tab order is **Quote → Palette Assistant → Gallery Studio → Inventory → TD Lab**.
-3. Open an existing quote and confirm existing project data still loads.
-4. Create or edit a draft/quoted project and confirm the production fields are labeled **Slicer print time** and **Slicer filament usage**.
-5. Enter slicer time and grams for at least one physical roll and confirm Floor Price, List Price, stock sufficiency, and pricing warnings still behave as before.
-6. Save the project, restart the Hub, and confirm the slicer values persist.
-7. Open **Palette Assistant** and confirm it is no longer below the Quote project list.
-8. Confirm the M3B behavior still works: selected-material-only suggestions, duplicate identical rolls grouped into one color candidate, TD/stock metadata, replace/reorder/remove, save, and restart persistence.
-9. Open **Gallery Studio**, choose a project whose status is not yet completed, and change it to `finished`.
-10. Confirm the Hub shows the exact roll/color grams that will be deducted before saving.
-11. Confirm the deduction and complete the save. Verify the project becomes finished and the selected Inventory roll weight drops by exactly the slicer grams in the same save.
-12. Restart and confirm both the finished status and reduced roll weight persist.
-13. Change that same project between completed statuses such as `finished` → `delivered` and confirm Inventory is **not deducted a second time**.
-14. Confirm Manual Subtract still works independently for a test adjustment or failed-print waste.
-15. Confirm Gallery Catalog, Gallery Export, captions, Inventory backups/import/export, and TD Lab still operate normally.
+Manual acceptance confirmed the complete workflow behaves as intended:
 
-This cleanup remains pending manual acceptance. Optional M3C Experimental TD Preview is not part of this cleanup and does not begin automatically.
+1. Hub launches directly to **Quote** with the workflow-first tab order.
+2. Existing project data remains compatible.
+3. Slicer print time and slicer filament usage persist and feed the locked quote calculations correctly.
+4. Palette Assistant remains separate from Quote and preserves the accepted M3B material filtering, duplicate-roll grouping, TD/stock metadata, editing, saving, and restart persistence.
+5. Gallery Studio can transition a project to a completed status and shows the exact physical-roll deduction before saving.
+6. Project completion and Inventory deduction persist together, and completed-status changes do not deduct the same project twice.
+7. Manual Subtract remains available for failed-print waste and other manual corrections.
+8. Gallery Catalog, Gallery Export, captions, Inventory safety tools, backups/import/export, and TD Lab continue to operate as intended.
+
+All required V2 work is complete.
+
+## Optional future work
+
+**M3C — Experimental TD Preview** remains optional and has not been started. Skipping M3C does not make V2 incomplete. It requires a separate explicit go/no-go decision before development begins.
