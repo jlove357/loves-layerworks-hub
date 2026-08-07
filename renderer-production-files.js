@@ -403,7 +403,7 @@
     addManagerButton(card.querySelector('.project-actions'), () => card.dataset.projectId);
     const flags = card.querySelector('.project-flags');
     if (flags && !flags.querySelector('.production-file-count')) {
-      flags.append(createTextElement('span', 'production-file-count', `${fileCountLabel(project.productionFiles || [])} · files`));
+      flags.append(createTextElement('span', 'production-file-count', `Production: ${fileCountLabel(project.productionFiles || [])}`));
     }
   }
 
