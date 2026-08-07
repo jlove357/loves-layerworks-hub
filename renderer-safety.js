@@ -172,6 +172,8 @@ loadFeatureScript('td-logic.js')
   .then(() => loadFeatureScript('renderer-workflow-cleanup.js'))
   .then(() => loadFeatureScript('production-file-logic.js'))
   .then(() => loadFeatureScript('renderer-production-files.js'))
+  .then(() => loadFeatureScript('project-reuse-logic.js'))
+  .then(() => loadFeatureScript('renderer-project-reuse.js'))
   .catch((error) => {
     console.error(error);
     setStatus(`Feature load failed: ${error.message}`, 'error');
