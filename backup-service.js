@@ -54,14 +54,20 @@ async function exportFullBackup() {
   await fs.copyFile(paths.dataFile, path.join(destination, 'hub-data.json'));
   await copyDirectory(path.join(paths.root, 'images'), path.join(destination, 'images'));
   await copyDirectory(paths.exportsDir, path.join(destination, 'exports'));
+  await copyDirectory(paths.filesDir, path.join(destination, 'files'));
 
+  const productionFileCount = loaded.data.projects.reduce(
+    (sum, project) => sum + (Array.isArray(project.productionFiles) ? project.productionFiles.length : 0),
+    0
+  );
   const manifest = {
     backupType: 'loves-layerworks-full-backup',
     schemaVersion: loaded.data.schemaVersion,
     exportedAt: new Date().toISOString(),
     rollCount: loaded.data.filaments.length,
     projectCount: loaded.data.projects.length,
-    includes: ['hub-data.json', 'images/swatches', 'images/originals', 'images/finished', 'exports']
+    productionFileCount,
+    includes: ['hub-data.json', 'images/swatches', 'images/originals', 'images/finished', 'exports', 'files/projects']
   };
   await fs.writeFile(path.join(destination, 'manifest.json'), JSON.stringify(manifest, null, 2), 'utf8');
 
@@ -71,6 +77,7 @@ async function exportFullBackup() {
     fs.access(path.join(destination, 'images', 'originals')),
     fs.access(path.join(destination, 'images', 'finished')),
     fs.access(path.join(destination, 'exports')),
+    fs.access(path.join(destination, 'files', 'projects')),
     fs.access(path.join(destination, 'manifest.json'))
   ]);
   return { canceled: false, path: destination };
@@ -82,6 +89,7 @@ async function dataStatus() {
     root: paths.root,
     dataFile: paths.dataFile,
     backupDir: paths.backupDir,
+    productionFilesDir: paths.productionProjectsDir,
     backups: await listValidBackups()
   };
 }
