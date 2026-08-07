@@ -19,7 +19,6 @@ const {
   openProductionFile,
   showProductionFile,
   deleteProductionFile,
-  deleteProjectProductionFolder,
   removeProjectProductionFolder
 } = require('./production-file-service');
 const { saveGalleryExport, revealGalleryExport } = require('./gallery-export-service');
@@ -88,7 +87,6 @@ app.whenReady().then(async () => {
   ipcMain.handle('hub:open-production-file', openProductionFile);
   ipcMain.handle('hub:show-production-file', showProductionFile);
   ipcMain.handle('hub:delete-production-file', deleteProductionFile);
-  ipcMain.handle('hub:delete-project-production-folder', deleteProjectProductionFolder);
   ipcMain.handle('hub:save-gallery-export', saveGalleryExport);
   ipcMain.handle('hub:reveal-gallery-export', revealGalleryExport);
   ipcMain.handle('hub:copy-text', (_event, value) => {
