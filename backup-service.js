@@ -92,12 +92,20 @@ async function exportFullBackup() {
 
 async function dataStatus() {
   const paths = await ensureHubStructure();
-  const storage = await getProductionStorageStatus();
+  let productionFilesDir = null;
+  let productionStorageError = null;
+  try {
+    const storage = await getProductionStorageStatus();
+    productionFilesDir = path.join(storage.root, 'projects');
+  } catch (error) {
+    productionStorageError = error.message;
+  }
   return {
     root: paths.root,
     dataFile: paths.dataFile,
     backupDir: paths.backupDir,
-    productionFilesDir: path.join(storage.root, 'projects'),
+    productionFilesDir,
+    productionStorageError,
     backups: await listValidBackups()
   };
 }
