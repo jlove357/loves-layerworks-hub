@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data:">
+  <title>Love's LayerWorks Hub</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="shell">
+    <aside>
+      <div class="brand">
+        <b>LL</b>
+        <span><strong id="appName">Love's LayerWorks Hub</strong><small>Shop operating workspace</small></span>
+      </div>
+
+      <nav role="tablist" aria-label="Main workspace">
+        <button id="planner-tab" class="tab active" role="tab" aria-selected="true" data-tab="planner" data-title="Quote">
+          <i>◇</i><span><strong>Quote</strong><small>Projects and pricing</small></span>
+        </button>
+        <button id="palette-tab" class="tab" role="tab" aria-selected="false" data-tab="palette" data-title="Palette Assistant" tabindex="-1">
+          <i>◈</i><span><strong>Palette Assistant</strong><small>Inventory color planning</small></span>
+        </button>
+        <button id="gallery-tab" class="tab" role="tab" aria-selected="false" data-tab="gallery" data-title="Gallery Studio" tabindex="-1">
+          <i>▦</i><span><strong>Gallery Studio</strong><small>Finished work</small></span>
+        </button>
+        <button id="inventory-tab" class="tab" role="tab" aria-selected="false" data-tab="inventory" data-title="Inventory" tabindex="-1">
+          <i>◫</i><span><strong>Inventory</strong><small>Roll Brain</small></span>
+        </button>
+        <button id="td-tab" class="tab" role="tab" aria-selected="false" data-tab="td" data-title="TD Lab" tabindex="-1">
+          <i>◎</i><span><strong>TD Lab</strong><small>Measurements</small></span>
+        </button>
+      </nav>
+
+      <div class="local">
+        <em></em>
+        <span><strong>Local-only app</strong><small>Live shop data stays outside the GitHub folder.</small></span>
+      </div>
+    </aside>
+
+    <main>
+      <header>
+        <div><small>LOVE'S LAYERWORKS</small><h1 id="pageTitle">Quote</h1></div>
+        <div class="header-actions">
+          <span id="status" class="status" data-tone="neutral" aria-live="polite">Loading local shop data</span>
+          <span class="badge"><b id="milestone">V2</b> Workflow Cleanup</span>
+        </div>
+      </header>
+
+      <section id="planner-panel" role="tabpanel" aria-labelledby="planner-tab">
+        <article class="coming-card"><div><small>PROJECT DESK</small><h2>Quote</h2><p>Create projects, enter slicer print specifications, and calculate pricing from the physical rolls on your shelf.</p></div><span><b>Loading</b><small>Project workspace</small></span></article>
+      </section>
+
+      <section id="palette-panel" role="tabpanel" aria-labelledby="palette-tab" hidden>
+        <article class="coming-card"><div><small>PALETTE ASSISTANT</small><h2>Inventory color planning</h2><p>Match project reference colors to active filament inventory without burying the palette tools below the quote list.</p></div><span><b>Loading</b><small>Palette workspace</small></span></article>
+      </section>
+
+      <section id="gallery-panel" role="tabpanel" aria-labelledby="gallery-tab" hidden>
+        <article class="coming-card"><div><small>FINISHED WORK</small><h2>Gallery Studio</h2><p>Finished project records, managed photos, portfolio exports, and offline caption drafts.</p></div><span><b>Loading</b><small>Gallery workspace</small></span></article>
+      </section>
+
+      <section id="inventory-panel" role="tabpanel" aria-labelledby="inventory-tab" hidden>
+        <article class="inventory-hero">
+          <div>
+            <small>ROLL BRAIN</small>
+            <h2>Inventory with a safety net.</h2>
+            <p>Track every physical roll, keep swatch photos inside managed storage, and protect the complete Hub file with verified rolling and external backups.</p>
+          </div>
+          <button id="addRollHero" class="primary large" type="button">Add a filament roll</button>
+        </article>
+
+        <div class="stats" aria-label="Inventory summary">
+          <article><small>Active rolls</small><strong id="activeRollCount">0</strong><span>Available for projects</span></article>
+          <article><small>Low stock</small><strong id="lowStockCount">0</strong><span id="lowStockLabel">Below 200 g</span></article>
+          <article><small>Usable filament</small><strong id="totalWeight">0 g</strong><span>Across active rolls</span></article>
+          <article><small>Remaining value</small><strong id="remainingValue">$0.00</strong><span>Estimated active inventory</span></article>
+        </div>
+
+        <article class="workspace-card">
+          <div class="workspace-head">
+            <div><small>PHYSICAL ROLL INVENTORY</small><h2>Filament rolls</h2></div>
+            <button id="addRoll" class="primary" type="button">Add roll</button>
+          </div>
+
+          <div class="filters">
+            <label class="search-field"><span>Search rolls</span><input id="searchRolls" type="search" placeholder="Color, brand, material, code, or location"></label>
+            <label><span>Show</span><select id="statusFilter"><option value="active">Active rolls</option><option value="all">Active and archived</option><option value="archived">Archived rolls</option></select></label>
+            <label class="check-filter"><input id="lowStockOnly" type="checkbox"><span><strong>Low stock only</strong><small id="lowStockFilterText">Under 200 g</small></span></label>
+          </div>
+
+          <div id="inventoryNotice" class="notice" hidden></div>
+          <div id="inventoryList" class="roll-grid" aria-live="polite"></div>
+          <div id="inventoryEmpty" class="empty-state">
+            <b>No rolls yet</b>
+            <p>Add your first physical filament roll to begin building Roll Brain.</p>
+            <button id="addFirstRoll" type="button">Add first roll</button>
+          </div>
+        </article>
+
+        <article class="workspace-card safety-card">
+          <div class="workspace-head">
+            <div><small>DATA SAFETY</small><h2>Backups, import, and export</h2></div>
+            <span id="backupCount" class="backup-count">0 rolling backups</span>
+          </div>
+          <p class="section-intro">Each verified save keeps the previous working file as a timestamped backup. Only the 10 newest rolling backups are retained.</p>
+
+          <div class="safety-grid">
+            <section>
+              <h3>Inventory file</h3>
+              <p>Export or replace only the filament collection. Settings and projects stay untouched.</p>
+              <div class="button-row">
+                <button id="exportInventory" type="button">Export inventory</button>
+                <button id="importInventory" type="button">Import inventory</button>
+              </div>
+            </section>
+            <section>
+              <h3>Restore a rolling backup</h3>
+              <p>Choose a previously verified Hub file. The current file is preserved before restoration.</p>
+              <label><span>Available backups</span><select id="backupSelect"><option value="">No backups available</option></select></label>
+              <button id="restoreBackup" type="button">Restore selected backup</button>
+            </section>
+            <section>
+              <h3>Full external backup</h3>
+              <p>Copy data, managed images, exports, and a manifest to a USB drive or another chosen folder.</p>
+              <button id="exportFullBackup" class="primary" type="button">Export full backup</button>
+            </section>
+          </div>
+
+          <div class="path-grid">
+            <p><strong>Live data:</strong> <code id="dataPath">Resolving Documents folder…</code></p>
+            <p><strong>Rolling backups:</strong> <code id="backupPath">Resolving backup folder…</code></p>
+          </div>
+        </article>
+      </section>
+
+      <section id="td-panel" role="tabpanel" aria-labelledby="td-tab" hidden>
+        <article class="coming-card"><div><small>MEASUREMENT WORKSPACE</small><h2>TD Lab</h2><p>Stock and personally measured transmission-distance records for filament planning.</p></div><span><b>Loading</b><small>TD workspace</small></span></article>
+      </section>
+
+      <footer><span><b>V2:</b> Workflow Cleanup</span><span class="ready"><i></i>Ready for local testing</span></footer>
+    </main>
+  </div>
+
+  <dialog id="rollDialog" class="modal">
+    <form id="rollForm" novalidate>
+      <div class="modal-head"><div><small>PHYSICAL FILAMENT ROLL</small><h2 id="rollDialogTitle">Add roll</h2></div><button id="closeRollDialog" class="icon-button" type="button" aria-label="Close">×</button></div>
+      <div class="form-grid">
+        <label>Roll code <span class="required">Required</span><input id="rollCode" type="text" maxlength="80" placeholder="SUN-BLACK-001" required></label>
+        <label>Brand <span class="required">Required</span><input id="brand" type="text" maxlength="80" placeholder="SUNLU" required></label>
+        <label>Material <span class="required">Required</span><input id="material" type="text" maxlength="50" placeholder="PLA+" required></label>
+        <label>Color name <span class="required">Required</span><input id="colorName" type="text" maxlength="100" placeholder="Black" required></label>
+        <label>Display color<input id="colorHex" type="color" value="#7c5cff"></label>
+        <label>Storage location<input id="binLocation" type="text" maxlength="100" placeholder="Shelf A, Bin 2"></label>
+        <label>Starting filament weight<input id="startingWeight" type="number" min="0.01" step="0.1" value="1000" required><small>Usable filament only, in grams</small></label>
+        <label>Current filament weight<input id="currentWeight" type="number" min="0" step="0.1" value="1000" required><small>Usable filament remaining</small></label>
+        <label>Empty spool tare weight<input id="spoolTare" type="number" min="0" step="0.1" placeholder="Optional"><small>Grams</small></label>
+        <label>Purchase cost<input id="purchaseCost" type="number" min="0" step="0.01" value="0"><small>Dollars paid for this roll</small></label>
+        <label>Purchase date<input id="purchaseDate" type="date"></label>
+        <label>Stock TD<input id="tdStock" type="number" min="0" step="0.01" placeholder="Optional"><small>Manufacturer or library value in mm</small></label>
+
+        <section class="swatch-field wide">
+          <div>
+            <span>Swatch photo</span>
+            <small>The selected image will be copied into managed Hub storage when the roll saves.</small>
+          </div>
+          <div class="swatch-controls">
+            <div id="swatchPreview" class="swatch-preview"><span>No swatch attached</span></div>
+            <div>
+              <button id="chooseSwatch" type="button">Choose image</button>
+              <button id="removeSwatch" type="button">Remove image</button>
+              <p id="swatchFileName">No file selected</p>
+            </div>
+          </div>
+        </section>
+
+        <label class="wide">Notes<textarea id="rollNotes" rows="4" maxlength="1000" placeholder="Batch notes, print observations, or reminders"></textarea></label>
+      </div>
+      <p id="rollFormError" class="form-error" role="alert" hidden></p>
+      <div class="modal-actions"><button id="cancelRoll" type="button">Cancel</button><button id="saveRoll" class="primary" type="submit">Save roll</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="subtractDialog" class="modal small-modal">
+    <form id="subtractForm" novalidate>
+      <div class="modal-head"><div><small>MANUAL WEIGHT ADJUSTMENT</small><h2>Subtract filament</h2></div><button id="closeSubtractDialog" class="icon-button" type="button" aria-label="Close">×</button></div>
+      <p id="subtractRollName" class="modal-intro"></p>
+      <label>Grams used<input id="subtractAmount" type="number" min="0.1" step="0.1" required></label>
+      <p id="subtractRemaining" class="calculation-preview"></p>
+      <p id="subtractError" class="form-error" role="alert" hidden></p>
+      <div class="modal-actions"><button id="cancelSubtract" type="button">Cancel</button><button class="primary" type="submit">Subtract weight</button></div>
+    </form>
+  </dialog>
+
+  <script src="renderer-state.js"></script>
+  <script src="renderer-cards.js"></script>
+  <script src="renderer-form.js"></script>
+  <script src="renderer-save.js"></script>
+  <script src="renderer-weight.js"></script>
+  <script src="renderer-safety.js"></script>
+</body>
+</html>
